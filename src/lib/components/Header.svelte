@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { showShortcutsTooltip } from '$lib/stores/shortcuts';
 
 	interface User {
 		_id: string;
@@ -40,6 +41,10 @@
 			console.error('Error logging out:', error);
 		}
 	}
+
+	function showShortcuts() {
+		showShortcutsTooltip.set(true);
+	}
 </script>
 
 <!-- Header with profile section -->
@@ -61,6 +66,28 @@
 			<div class="h-10 w-36 animate-pulse rounded bg-gray-200"></div>
 		{:else if user}
 			<div class="flex items-center gap-3">
+				<button
+					class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-100"
+					on:click={showShortcuts}
+					title="Keyboard Shortcuts"
+					aria-label="Show keyboard shortcuts"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="10"></circle>
+						<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+						<line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+				</button>
 				<a href="/profile" class="flex items-center gap-2">
 					<div
 						class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-black text-white"
@@ -82,6 +109,28 @@
 			</div>
 		{:else}
 			<div class="flex gap-2">
+				<button
+					class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-100"
+					on:click={showShortcuts}
+					title="Keyboard Shortcuts"
+					aria-label="Show keyboard shortcuts"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="12" cy="12" r="10"></circle>
+						<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+						<line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+				</button>
 				<a
 					href="/auth/login"
 					class="rounded border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-100"

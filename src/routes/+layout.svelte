@@ -1,6 +1,8 @@
 <script>
 	import '../app.css';
 	import Header from '$lib/components/Header.svelte';
+	import KeyboardShortcuts from '$lib/components/KeyboardShortcuts.svelte';
+	import ShortcutsTooltip from '$lib/components/ShortcutsTooltip.svelte';
 
 	let { children } = $props();
 </script>
@@ -10,6 +12,8 @@
 	<main>
 		{@render children()}
 	</main>
+	<KeyboardShortcuts />
+	<ShortcutsTooltip />
 </div>
 
 <style>
