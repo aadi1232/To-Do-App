@@ -45,7 +45,17 @@
 <!-- Header with profile section -->
 <header class="border-b border-gray-200 bg-white p-4">
 	<div class="container mx-auto flex items-center justify-between">
-		<h1 class="text-xl font-bold">To-Do App</h1>
+		<div class="flex items-center">
+			<h1 class="mr-6 text-xl font-bold">To-Do App</h1>
+
+			{#if user && !loading}
+				<nav class="flex space-x-4">
+					<a href="/" class="rounded px-3 py-2 hover:bg-gray-100">Home</a>
+					<a href="/groups" class="rounded px-3 py-2 hover:bg-gray-100">Show Groups</a>
+					<a href="/groups/create" class="rounded px-3 py-2 hover:bg-gray-100">Create Group</a>
+				</nav>
+			{/if}
+		</div>
 
 		{#if loading}
 			<div class="h-10 w-36 animate-pulse rounded bg-gray-200"></div>
