@@ -9,28 +9,28 @@ import {
 	inviteToGroup,
 	getGroupById,
 	updateGroup,
-	deleteGroup
+	deleteGroup,
+	getSharedGroupById
 } from '../controllers/group.controller.js';
 import { protect } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// All group routes require authentication
+// Public route for shared groups (no auth required)
+router.get('/shared/:id', getSharedGroupById);
+
+// All other group routes require authentication
 router.use(protect);
 
-// Base group routes
-router.post('/', createGroup);
+// Routes that require authentication
 router.get('/', getUserGroups);
-
-// Invitation and member routes (must come before /:id routes to avoid conflicts)
+router.post('/', createGroup);
 router.get('/invitations', getPendingInvitations);
-router.post('/invitations/respond', respondToInvitation);
-router.put('/members/role', updateMemberRole);
-router.delete('/members', removeMember);
-
-// Dynamic group ID routes (these must come AFTER any static segment routes)
-router.get('/:id', getGroupById);
+router.post('/invitation/:id/respond', respondToInvitation);
+router.put('/:id/member/:memberId/role', updateMemberRole);
+router.delete('/:id/member/:memberId', removeMember);
 router.post('/:id/invite', inviteToGroup);
+router.get('/:id', getGroupById);
 router.put('/:id', updateGroup);
 router.delete('/:id', deleteGroup);
 

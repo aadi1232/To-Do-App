@@ -199,6 +199,49 @@
 		}, 3000);
 	}
 
+	function shareGroup() {
+		// Generate a view-only share link
+		const baseUrl = window.location.origin;
+		const shareUrl = `${baseUrl}/shared/group/${groupId}`;
+
+		// Copy to clipboard
+		if (navigator.clipboard) {
+			navigator.clipboard
+				.writeText(shareUrl)
+				.then(() => {
+					showNotification(
+						'View-only link copied to clipboard! Anyone with this link can view this group without logging in.'
+					);
+				})
+				.catch((err) => {
+					console.error('Could not copy text: ', err);
+					showNotification('Failed to copy link', 'error');
+				});
+		} else {
+			// Fallback for browsers that don't support clipboard API
+			const textArea = document.createElement('textarea');
+			textArea.value = shareUrl;
+			document.body.appendChild(textArea);
+			textArea.select();
+
+			try {
+				const successful = document.execCommand('copy');
+				if (successful) {
+					showNotification(
+						'View-only link copied to clipboard! Anyone with this link can view this group without logging in.'
+					);
+				} else {
+					showNotification('Failed to copy link', 'error');
+				}
+			} catch (err) {
+				console.error('Could not copy text: ', err);
+				showNotification('Failed to copy link', 'error');
+			}
+
+			document.body.removeChild(textArea);
+		}
+	}
+
 	function getMemberName(member: any): string {
 		if (typeof member.user === 'string') {
 			return 'Unknown User';
@@ -497,33 +540,52 @@
 
 			<!-- Group Tabs -->
 			<div class="mb-6 border-b border-gray-200">
-				<nav class="-mb-px flex space-x-8">
-					<button
-						class="px-1 py-4 text-sm font-medium {activeTab === 'todos'
-							? 'border-b-2 border-black text-black'
-							: 'text-gray-500 hover:text-gray-700'}"
-						on:click={() => changeTab('todos')}
-					>
-						To-Dos
-					</button>
-					<button
-						class="px-1 py-4 text-sm font-medium {activeTab === 'members'
-							? 'border-b-2 border-black text-black'
-							: 'text-gray-500 hover:text-gray-700'}"
-						on:click={() => changeTab('members')}
-					>
-						Members
-					</button>
-					{#if isAdmin()}
+				<nav class="-mb-px flex items-center">
+					<div class="flex flex-grow space-x-8">
 						<button
-							class="px-1 py-4 text-sm font-medium {activeTab === 'settings'
+							class="px-1 py-4 text-sm font-medium {activeTab === 'todos'
 								? 'border-b-2 border-black text-black'
 								: 'text-gray-500 hover:text-gray-700'}"
-							on:click={() => changeTab('settings')}
+							on:click={() => changeTab('todos')}
 						>
-							Settings
+							To-Dos
 						</button>
-					{/if}
+						<button
+							class="px-1 py-4 text-sm font-medium {activeTab === 'members'
+								? 'border-b-2 border-black text-black'
+								: 'text-gray-500 hover:text-gray-700'}"
+							on:click={() => changeTab('members')}
+						>
+							Members
+						</button>
+						{#if isAdmin()}
+							<button
+								class="px-1 py-4 text-sm font-medium {activeTab === 'settings'
+									? 'border-b-2 border-black text-black'
+									: 'text-gray-500 hover:text-gray-700'}"
+								on:click={() => changeTab('settings')}
+							>
+								Settings
+							</button>
+						{/if}
+					</div>
+					<button
+						on:click={shareGroup}
+						class="flex items-center rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-1 h-4 w-4"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							aria-hidden="true"
+						>
+							<path
+								d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"
+							/>
+						</svg>
+						Share
+					</button>
 				</nav>
 			</div>
 
@@ -532,6 +594,12 @@
 				{#if activeTab === 'todos'}
 					<div class="todos-section">
 						<h2 class="mb-4 text-xl font-medium">Group To-Dos</h2>
+
+						{#if userRole === 'member'}
+							<div class="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+								You are a member of this group and have read-only access to todos.
+							</div>
+						{/if}
 
 						{#if canAddTodos()}
 							<form class="mb-6" on:submit|preventDefault={handleAddTodo}>
@@ -595,7 +663,11 @@
 
 						{#if todos.length === 0}
 							<p class="py-8 text-center text-gray-500">
-								No todos yet. {canAddTodos() ? 'Add one to get started!' : ''}
+								{#if userRole === 'member'}
+									No todos yet. You are a member and can only read todos in this group.
+								{:else}
+									No todos yet. {canAddTodos() ? 'Add one to get started!' : ''}
+								{/if}
 							</p>
 						{:else}
 							<ul class="space-y-2">
@@ -609,6 +681,7 @@
 												checked={todo.completed}
 												on:change={() => handleToggleTodo(todo)}
 												class="mr-3 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+												disabled={userRole === 'member'}
 											/>
 											<span class={todo.completed ? 'text-gray-500 line-through' : ''}>
 												{todo.title}

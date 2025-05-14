@@ -612,3 +612,41 @@ export const deleteGroup = async (req, res) => {
 		});
 	}
 };
+
+// Get shared group by ID (public access - no auth required)
+export const getSharedGroupById = async (req, res) => {
+	try {
+		const { id: groupId } = req.params;
+
+		const group = await Group.findById(groupId)
+			.populate('members.user', 'username profileImage') // Only expose username and profile image
+			.populate('createdBy', 'username');
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Shared group not found'
+			});
+		}
+
+		// Get todos for the group
+		const Todo = (await import('../models/todo.model.js')).default;
+		const todos = await Todo.find({ group: groupId })
+			.sort({ createdAt: -1 })
+			.populate('createdBy', 'username');
+
+		// Return the group and todos
+		res.status(200).json({
+			success: true,
+			group,
+			todos
+		});
+	} catch (error) {
+		console.error('Error fetching shared group:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to fetch shared group',
+			error: error.message
+		});
+	}
+};

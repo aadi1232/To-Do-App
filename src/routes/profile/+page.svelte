@@ -146,8 +146,6 @@
 		</div>
 	{/if}
 
-	
-
 	<div class="container mx-auto max-w-4xl p-6">
 		{#if loading}
 			<div class="flex h-64 items-center justify-center">
@@ -187,7 +185,7 @@
 						<h2 class="text-xl font-semibold">{user.username}</h2>
 						<p class="mt-1 text-gray-600">{user.email}</p>
 						<p class="mt-2 text-sm text-gray-500">
-							Member since: {new Date(user.createdAt || Date.now()).toLocaleDateString()}
+							Member since: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
 						</p>
 					</div>
 				</div>
@@ -248,34 +246,41 @@
 				{:else if userGroups.length === 0}
 					<p class="py-4 text-center text-gray-600">You are not a member of any groups yet.</p>
 				{:else}
-					<ul class="divide-y divide-gray-200">
+					<ul class="space-y-4">
 						{#each userGroups as group}
-							<li class="flex flex-col justify-between gap-4 py-4 sm:flex-row">
+							<li
+								class="mb-4 flex flex-col justify-between gap-4 rounded border border-gray-200 bg-white p-4 py-4 shadow-sm sm:flex-row"
+							>
 								<div class="flex items-center gap-3">
 									{#if group.imageUrl && group.imageUrl.length > 2}
 										<img
 											src={group.imageUrl}
 											alt={group.name}
-											class="h-10 w-10 rounded-full border border-gray-200 object-cover"
+											class="h-16 w-16 rounded-full border-2 border-gray-200 object-cover"
 										/>
 									{:else}
 										<div
-											class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700"
+											class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-100 text-xl font-semibold text-gray-700"
 										>
 											{group.name.charAt(0).toUpperCase()}
 										</div>
 									{/if}
 									<div>
-										<h4 class="font-medium">{group.name}</h4>
-										<p class="text-sm text-gray-600">
+										<h4 class="text-lg font-medium">{group.name}</h4>
+										<p class="mt-1 text-sm text-gray-600">
 											{group.members.length} member{group.members.length !== 1 ? 's' : ''}
 										</p>
+										{#if group.createdAt}
+											<p class="mt-1 text-xs text-gray-500">
+												Created: {new Date(group.createdAt).toLocaleDateString()}
+											</p>
+										{/if}
 									</div>
 								</div>
 								<div class="self-center">
 									<button
-										on:click={() => goto(`/group/${group._id}`)}
-										class="rounded bg-gray-100 px-3 py-1 text-sm hover:bg-gray-200"
+										on:click={() => goto(`/groups/${group._id}`)}
+										class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
 									>
 										View Group
 									</button>
@@ -297,24 +302,24 @@
 				{:else if pendingInvitations.length === 0}
 					<p class="text-gray-600">No pending invitations</p>
 				{:else}
-					<ul class="divide-y divide-gray-200">
+					<ul class="space-y-4">
 						{#each pendingInvitations as invite}
-							<li class="flex flex-col justify-between gap-4 py-4 sm:flex-row">
+							<li
+								class="mb-4 flex flex-col justify-between gap-4 rounded border border-gray-200 bg-white p-4 py-4 shadow-sm sm:flex-row"
+							>
 								<div>
-									<h4 class="font-medium">{invite.name}</h4>
-									<p class="text-sm text-gray-600">
-										Invited by: {typeof invite.createdBy === 'string'
-											? invite.createdBy
-											: invite.createdBy.username}
+									<h4 class="text-lg font-medium">{invite.group?.name || 'Group Invitation'}</h4>
+									<p class="mt-1 text-sm text-gray-600">
+										Invited by: {invite.invitedBy?.username || 'Unknown'}
 									</p>
-									<p class="text-sm text-gray-500">
+									<p class="mt-1 text-xs text-gray-500">
 										Invited: {new Date(invite.createdAt).toLocaleDateString()}
 									</p>
 								</div>
 								<div class="flex gap-2 sm:self-center">
 									<button
 										on:click={() => handleInviteResponse(invite._id, 'accepted')}
-										class="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800"
+										class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
 									>
 										Accept
 									</button>
