@@ -104,12 +104,15 @@ export const getPendingInvitations = async (req, res) => {
 	try {
 		const userId = req.user._id;
 
+		// Find groups where the user has a pending invitation but is not the creator
 		const pendingGroups = await Group.find({
 			'members.user': userId,
-			'members.invitationStatus': 'pending'
+			'members.invitationStatus': 'pending',
+			createdBy: { $ne: userId } // Exclude groups created by the user
 		})
 			.populate('members.user', 'username email profileImage')
-			.populate('createdBy', 'username email profileImage');
+			.populate('createdBy', 'username email profileImage')
+			.populate('members.addedBy', 'username email profileImage');
 
 		res.status(200).json({
 			success: true,
@@ -156,6 +159,13 @@ export const respondToInvitation = async (req, res) => {
 			(member) => member.user.toString() === userId.toString()
 		);
 
+		if (memberIndex === -1) {
+			return res.status(404).json({
+				success: false,
+				message: 'User not found in group members'
+			});
+		}
+
 		group.members[memberIndex].invitationStatus = response;
 
 		// If declined, remove from group
@@ -165,10 +175,15 @@ export const respondToInvitation = async (req, res) => {
 
 		await group.save();
 
+		// Populate the group data for the response
+		const populatedGroup = await Group.findById(group._id)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
 		res.status(200).json({
 			success: true,
 			message: `Invitation ${response}`,
-			group
+			group: populatedGroup
 		});
 	} catch (error) {
 		console.error('Error responding to invitation:', error);

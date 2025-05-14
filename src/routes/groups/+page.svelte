@@ -28,10 +28,15 @@
 
 			// Filter out invitations to groups the user created
 			invitations = fetchedInvitations.filter((invitation) => {
+				// Only show invitations where the user is not the creator
+				if (!invitation) return false;
+
 				// Check if user is not the creator of the group
-				return typeof invitation.createdBy === 'string'
-					? invitation.createdBy !== currentUserId
-					: invitation.createdBy._id !== currentUserId;
+				if (typeof invitation.createdBy === 'object') {
+					return invitation.createdBy._id !== currentUserId;
+				} else {
+					return invitation.createdBy !== currentUserId;
+				}
 			});
 		} catch (err) {
 			console.error('Error fetching groups data:', err);

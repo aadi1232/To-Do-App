@@ -77,13 +77,16 @@ export async function respondToInvitation(
 	groupId: string,
 	responseType: 'accepted' | 'declined'
 ): Promise<Group> {
-	const apiResponse = await fetch('/api/groups/invitations/respond', {
+	const apiResponse = await fetch(`/api/groups/invitation/${groupId}/respond`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
 		},
 		credentials: 'include',
-		body: JSON.stringify({ groupId, response: responseType })
+		body: JSON.stringify({
+			groupId, // Include groupId in body as backend controller expects it
+			response: responseType
+		})
 	});
 
 	if (!apiResponse.ok) {
