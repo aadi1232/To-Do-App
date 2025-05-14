@@ -4,7 +4,11 @@ import { Readable } from 'stream';
 import connectDB, { dbState } from './db/db.js';
 import userRoutes from './routes/user.routes.js';
 import todoRoutes from './routes/todo.routes.js';
+<<<<<<< HEAD
 import groupRoutes from './routes/group.routes.js';
+=======
+import aiRoutes from './routes/ai.routes.js';
+>>>>>>> main
 
 // Create Express app
 const app = express();
@@ -31,7 +35,11 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/todos', todoRoutes);
+<<<<<<< HEAD
 app.use('/api/groups', groupRoutes);
+=======
+app.use('/api/ai', aiRoutes);
+>>>>>>> main
 
 // Not found handler
 app.use((req, res, next) => {
