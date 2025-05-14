@@ -2,6 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import connectDB, { dbState } from './db/db.js';
 import userRoutes from './routes/user.routes.js';
+import todoRoutes from './routes/todo.routes.js';
 
 // Create Express app
 const app = express();
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/users', userRoutes);
+app.use('/api/todos', todoRoutes);
 
 // Not found handler
 app.use((req, res, next) => {
