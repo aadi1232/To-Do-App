@@ -2,6 +2,8 @@ import express from 'express';
 import {
 	createTodo,
 	getTodos,
+	updateTodo,
+	deleteTodo,
 	createGroupTodo,
 	getGroupTodos,
 	updateGroupTodo,
@@ -16,6 +18,8 @@ router.use(protect);
 // Personal todo routes
 router.post('/', createTodo);
 router.get('/', getTodos);
+router.put('/:todoId', updateTodo);
+router.delete('/:todoId', deleteTodo);
 
 // Group todo routes
 router.post('/by-group/:groupId', createGroupTodo);

@@ -69,9 +69,14 @@ function createTodosStore() {
      * @param {string} id - The todo ID
      */
     toggleTodo: async (id) => {
+      // Optimistically update the UI
+      let currentTodoState = null;
       update(todos => {
         const todo = todos.find(t => t._id === id);
         if (!todo) return todos;
+        
+        // Remember the current state before toggling
+        currentTodoState = { ...todo };
         
         // Create a new array with the updated todo
         return todos.map(t => 
@@ -81,21 +86,37 @@ function createTodosStore() {
       
       // We're optimistically updating UI, but we should also update server
       try {
-        const currentTodos = get(store);
-        const todo = currentTodos.find(t => t._id === id);
-        
-        if (todo) {
-          await fetch(`/api/todos/${id}`, {
-            method: 'PATCH',
+        if (currentTodoState) {
+          const newCompletedState = !currentTodoState.completed;
+          
+          const response = await fetch(`/api/todos/${id}`, {
+            method: 'PUT',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ completed: todo.completed })
+            body: JSON.stringify({ completed: newCompletedState })
           });
+          
+          if (!response.ok) {
+            throw new Error('Failed to update todo');
+          }
+          
+          // Update with the server's response
+          const updatedTodo = await response.json();
+          
+          // Ensure our store reflects the server state
+          update(todos => todos.map(t => 
+            t._id === id ? updatedTodo : t
+          ));
         }
       } catch (error) {
         console.error('Error toggling todo:', error);
-        // Ideally, we would revert the optimistic update here
+        // Revert the optimistic update
+        if (currentTodoState) {
+          update(todos => todos.map(t => 
+            t._id === id ? currentTodoState : t
+          ));
+        }
       }
     }
   };

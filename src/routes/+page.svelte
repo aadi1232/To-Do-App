@@ -4,6 +4,7 @@
 	import Header from '$lib/components/Header.svelte';
 	import TodoInput from '$lib/components/TodoInput.svelte';
 	import TodoList from '$lib/components/TodoList.svelte';
+	import TodoSearch from '$lib/components/TodoSearch.svelte';
 
 	interface User {
 		username: string;
@@ -51,6 +52,11 @@
 		{#if user}
 			<div class="mx-auto mt-8 max-w-2xl">
 				<h2 class="mb-6 text-center text-2xl font-medium">Your Todo List</h2>
+				
+				<!-- Todo Search Bar -->
+				<div class="mb-4">
+					<TodoSearch />
+				</div>
 				
 				<!-- Todo Input with AI Suggestions -->
 				<div class="mb-6">

@@ -43,6 +43,7 @@
 		"mongoose": "^8.14.2",
 		"openai": "^4.98.0",
 		"socket.io": "^4.8.1",
-		"socket.io-client": "^4.8.1"
+		"socket.io-client": "^4.8.1",
+		"typesense": "^2.0.3"
 	}
 }
