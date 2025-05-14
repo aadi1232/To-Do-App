@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import {
 		inviteUserToGroup,
@@ -12,6 +12,7 @@
 	} from '$lib/api/groups';
 	import { getGroupTodos, createGroupTodo, updateGroupTodo, deleteGroupTodo } from '$lib/api/todos';
 	import type { Group, User, Todo } from '$lib/types';
+	import { getSuggestions } from '$lib/utils/ai/suggestTask.js';
 
 	const groupId = $page.params.id;
 
@@ -30,6 +31,13 @@
 	let activeTab = 'todos';
 	let todoLoading = false;
 	let inviteLoading = false;
+
+	// AI suggestion states
+	let suggestions: string[] = [];
+	let suggestionsVisible = false;
+	let suggestionsLoading = false;
+	let selectedIndex = -1;
+	let debounceTimeout: number | null = null;
 
 	// Add more form states
 	let editGroupName = '';
@@ -327,6 +335,73 @@
 	function canManageMembers() {
 		return userRole === 'admin' || userRole === 'co-lead' || userRole === 'elder';
 	}
+
+	async function fetchSuggestions(): Promise<void> {
+		if (newTodoTitle.trim().length < 2) {
+			suggestions = [];
+			suggestionsVisible = false;
+			return;
+		}
+		
+		suggestionsLoading = true;
+		try {
+			suggestions = await getSuggestions(newTodoTitle);
+			suggestionsVisible = suggestions.length > 0;
+			selectedIndex = -1;
+		} catch (error) {
+			console.error('Error fetching suggestions:', error);
+			suggestions = [];
+		} finally {
+			suggestionsLoading = false;
+		}
+	}
+	
+	function handleTodoInput(): void {
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+		debounceTimeout = window.setTimeout(() => {
+			fetchSuggestions();
+		}, 500); // 500ms debounce
+	}
+	
+	function handleTodoKeydown(event: KeyboardEvent): void {
+		if (!suggestionsVisible) return;
+		
+		switch (event.key) {
+			case 'ArrowDown':
+				event.preventDefault();
+				selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+				break;
+			case 'ArrowUp':
+				event.preventDefault();
+				selectedIndex = Math.max(selectedIndex - 1, -1);
+				break;
+			case 'Enter':
+				if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+					event.preventDefault();
+					newTodoTitle = suggestions[selectedIndex];
+					suggestionsVisible = false;
+				}
+				break;
+			case 'Escape':
+				event.preventDefault();
+				suggestionsVisible = false;
+				break;
+		}
+	}
+	
+	function selectSuggestion(suggestion: string): void {
+		newTodoTitle = suggestion;
+		suggestionsVisible = false;
+	}
+	
+	// Cleanup on component destroy
+	onDestroy(() => {
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+	});
 </script>
 
 <svelte:head>
@@ -466,6 +541,20 @@
 										bind:value={newTodoTitle}
 										placeholder="Add a new todo..."
 										class="flex-grow rounded-l border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+										on:input={handleTodoInput}
+										on:keydown={handleTodoKeydown}
+										on:blur={() => {
+											// Delay hiding suggestions to allow for clicks
+											setTimeout(() => {
+												suggestionsVisible = false;
+											}, 200);
+										}}
+										on:focus={() => {
+											// Show suggestions again if we have any
+											if (suggestions.length > 0) {
+												suggestionsVisible = true;
+											}
+										}}
 									/>
 									<button
 										type="submit"
@@ -476,6 +565,32 @@
 									</button>
 								</div>
 							</form>
+						{/if}
+
+						{#if suggestionsVisible}
+							<div class="relative mt-1 mb-4">
+								<div class="absolute z-10 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+									<div class="py-1">
+										{#if suggestionsLoading}
+											<div class="flex flex-col items-center py-3">
+												<div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500 mb-2"></div>
+												<p class="text-xs text-gray-500">AI is generating suggestions...</p>
+											</div>
+										{:else}
+											<p class="px-3 py-2 text-xs font-medium text-gray-500">AI suggestions:</p>
+											{#each suggestions as suggestion, i}
+												<div 
+													class="cursor-pointer px-3 py-2 hover:bg-gray-100 {i === selectedIndex ? 'bg-gray-100' : ''}"
+													on:mousedown={() => selectSuggestion(suggestion)}
+													on:mouseover={() => (selectedIndex = i)}
+												>
+													{suggestion}
+												</div>
+											{/each}
+										{/if}
+									</div>
+								</div>
+							</div>
 						{/if}
 
 						{#if todos.length === 0}
