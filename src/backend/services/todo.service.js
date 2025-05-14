@@ -1,9 +1,134 @@
 import Todo from '../models/todo.model.js';
+import Group from '../models/group.model.js';
 
 export async function createTodo(userId, data) {
-    return await Todo.create({ ...data, user: userId });
+	const todoData = {
+		...data,
+		user: userId,
+		createdBy: userId
+	};
+
+	return await Todo.create(todoData);
 }
 
 export async function getTodosByUser(userId) {
-    return await Todo.find({ user: userId }).sort({ createdAt: -1 });
+	return await Todo.find({ user: userId, group: null }).sort({ createdAt: -1 });
+}
+
+export async function createGroupTodo(userId, groupId, data) {
+	// Check if user is a member of the group with appropriate permissions
+	const group = await Group.findOne({
+		_id: groupId,
+		'members.user': userId,
+		'members.invitationStatus': 'accepted'
+	});
+
+	if (!group) {
+		throw new Error('Group not found or you are not a member');
+	}
+
+	// Find user's role in the group
+	const userMember = group.members.find((member) => member.user.toString() === userId.toString());
+
+	if (!userMember) {
+		throw new Error('You are not a member of this group');
+	}
+
+	// Check permissions based on role
+	if (userMember.role === 'member') {
+		throw new Error('You do not have permission to create todos in this group');
+	}
+
+	const todoData = {
+		...data,
+		user: userId,
+		group: groupId,
+		createdBy: userId
+	};
+
+	return await Todo.create(todoData);
+}
+
+export async function getGroupTodos(userId, groupId) {
+	// Check if user is a member of the group
+	const group = await Group.findOne({
+		_id: groupId,
+		'members.user': userId,
+		'members.invitationStatus': 'accepted'
+	});
+
+	if (!group) {
+		throw new Error('Group not found or you are not a member');
+	}
+
+	return await Todo.find({ group: groupId })
+		.sort({ createdAt: -1 })
+		.populate('createdBy', 'username email profileImage');
+}
+
+export async function updateGroupTodo(userId, todoId, data) {
+	const todo = await Todo.findById(todoId);
+
+	if (!todo) {
+		throw new Error('Todo not found');
+	}
+
+	if (!todo.group) {
+		throw new Error('This is not a group todo');
+	}
+
+	// Check if user is a member of the group with appropriate permissions
+	const group = await Group.findOne({
+		_id: todo.group,
+		'members.user': userId,
+		'members.invitationStatus': 'accepted'
+	});
+
+	if (!group) {
+		throw new Error('Group not found or you are not a member');
+	}
+
+	// Find user's role in the group
+	const userMember = group.members.find((member) => member.user.toString() === userId.toString());
+
+	// Check permissions based on role
+	if (userMember.role === 'member') {
+		throw new Error('You do not have permission to update todos in this group');
+	}
+
+	Object.assign(todo, data);
+	return await todo.save();
+}
+
+export async function deleteGroupTodo(userId, todoId) {
+	const todo = await Todo.findById(todoId);
+
+	if (!todo) {
+		throw new Error('Todo not found');
+	}
+
+	if (!todo.group) {
+		throw new Error('This is not a group todo');
+	}
+
+	// Check if user is a member of the group with appropriate permissions
+	const group = await Group.findOne({
+		_id: todo.group,
+		'members.user': userId,
+		'members.invitationStatus': 'accepted'
+	});
+
+	if (!group) {
+		throw new Error('Group not found or you are not a member');
+	}
+
+	// Find user's role in the group
+	const userMember = group.members.find((member) => member.user.toString() === userId.toString());
+
+	// Check permissions based on role
+	if (userMember.role === 'member') {
+		throw new Error('You do not have permission to delete todos in this group');
+	}
+
+	return await todo.remove();
 }

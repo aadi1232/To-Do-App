@@ -9,7 +9,10 @@ const config = {
 	kit: {
 		adapter: adapter(),
 		alias: {
-			$backend: path.resolve(__dirname, './src/backend')
+			$lib: path.resolve(__dirname, './src/lib'),
+			'$lib/*': path.resolve(__dirname, './src/lib/*'),
+			$backend: path.resolve(__dirname, './src/backend'),
+			'$backend/*': path.resolve(__dirname, './src/backend/*')
 		}
 	},
 	preprocess: vitePreprocess()
