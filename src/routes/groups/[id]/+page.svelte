@@ -13,6 +13,7 @@
 	import { getGroupTodos, createGroupTodo, updateGroupTodo, deleteGroupTodo } from '$lib/api/todos';
 	import type { Group, User, Todo } from '$lib/types';
 	import { getSuggestions } from '$lib/utils/ai/suggestTask.js';
+	import GroupTodoSearch from '$lib/components/GroupTodoSearch.svelte';
 
 	const groupId = $page.params.id;
 
@@ -601,6 +602,14 @@
 							</div>
 						{/if}
 
+						<!-- Add the search component -->
+						<GroupTodoSearch 
+							{groupId} 
+							onToggleTodo={handleToggleTodo} 
+							onDeleteTodo={handleDeleteTodo} 
+							canEdit={canAddTodos()}
+						/>
+						
 						{#if canAddTodos()}
 							<form class="mb-6" on:submit|preventDefault={handleAddTodo}>
 								<div class="flex">

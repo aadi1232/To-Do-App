@@ -1,7 +1,11 @@
 <script>
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { todos } from '../stores/todos.js';
+  
+  export let groupId; // Required prop to specify which group's todos to search
+  export let onToggleTodo = (todoId) => {}; // Allow parent to handle todo toggle
+  export let onDeleteTodo = (todo) => {}; // Allow parent to handle todo deletion
+  export let canEdit = true; // Whether the user can edit todos
   
   let searchQuery = '';
   let searchResults = [];
@@ -14,7 +18,7 @@
   onMount(async () => {
     try {
       // Optional: Sync todos to Typesense on component mount
-      const response = await fetch('/api/search/todos/sync', {
+      const response = await fetch(`/api/search/todos/group/sync?groupId=${encodeURIComponent(groupId)}`, {
         method: 'POST'
       });
       
@@ -29,7 +33,7 @@
       
       initialized = true;
     } catch (error) {
-      console.error('Failed to initialize search:', error);
+      console.error('Failed to initialize group search:', error);
       usingFallback = true; // Assume fallback if sync fails
     }
   });
@@ -53,17 +57,18 @@
         // Make sure the query is properly encoded and formatted
         const query = searchQuery.trim();
         const encodedQuery = encodeURIComponent(query);
-        console.log(`Searching with query: ${query} (encoded: ${encodedQuery})`);
+        console.log(`Searching group todos with query: ${query} (encoded: ${encodedQuery})`);
         
         // Create URL object to ensure proper URL formatting
-        const url = new URL('/api/search/todos', window.location.origin);
+        const url = new URL('/api/search/todos/group', window.location.origin);
         url.searchParams.append('query', query);
+        url.searchParams.append('groupId', groupId);
         
         const response = await fetch(url.toString());
         
         if (response.ok) {
           const data = await response.json();
-          console.log("Search results:", data);
+          console.log("Group search results:", data);
           
           // Update fallback status based on response
           usingFallback = data.fallback === true;
@@ -73,16 +78,17 @@
               _id: hit.document.id,
               title: hit.document.title,
               completed: hit.document.completed,
+              createdBy: hit.document.createdBy,
               // Format any highlighted content
               highlights: hit.highlights ? hit.highlights.map(h => h.snippet) : []
             }));
           } else {
-            console.warn("Unexpected search results format:", data);
+            console.warn("Unexpected group search results format:", data);
             searchResults = [];
           }
         } else {
           const errorText = await response.text();
-          console.error(`Search failed (${response.status}):`, errorText);
+          console.error(`Group search failed (${response.status}):`, errorText);
           try {
             // Try to parse as JSON for better error reporting
             const errorJson = JSON.parse(errorText);
@@ -92,7 +98,7 @@
           }
         }
       } catch (error) {
-        console.error('Error during search:', error);
+        console.error('Error during group search:', error);
       } finally {
         loading = false;
       }
@@ -103,11 +109,6 @@
   function clearSearch() {
     searchQuery = '';
     searchResults = [];
-  }
-  
-  // Toggle todo completion
-  function toggleTodo(id) {
-    todos.toggleTodo(id);
   }
 </script>
 
@@ -123,8 +124,8 @@
       bind:value={searchQuery}
       on:input={handleSearch}
       class="block w-full p-2.5 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500"
-      placeholder="Search todos..."
-      aria-label="Search personal todos"
+      placeholder="Search group todos..."
+      aria-label="Search group todos"
     />
     {#if searchQuery}
       <button 
@@ -161,9 +162,9 @@
               <input
                 type="checkbox"
                 checked={result.completed}
-                on:change={() => toggleTodo(result._id)}
+                on:change={() => onToggleTodo(result._id)}
                 class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                aria-label={`Toggle completion of todo: ${result.title}`}
+                disabled={!canEdit}
               />
               <div class="ml-3">
                 {#if result.highlights && result.highlights.length > 0}
@@ -176,9 +177,36 @@
                 {/if}
               </div>
             </div>
+            {#if canEdit}
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-gray-500">
+                  {typeof result.createdBy === 'string' ? 'Unknown' : result.createdBy.username}
+                </span>
+                <button
+                  on:click={() => onDeleteTodo(result)}
+                  class="ml-2 text-red-500 hover:text-red-700"
+                  title="Delete"
+                  aria-label="Delete todo"
+                >
+                  <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            {/if}
           </li>
         {/each}
       </ul>
     </div>
   {/if}
-</div>
+</div> 
