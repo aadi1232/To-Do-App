@@ -18,6 +18,26 @@ export async function getTodos(req, res) {
 	}
 }
 
+export async function updateTodo(req, res) {
+	try {
+		const { todoId } = req.params;
+		const todo = await todoService.updateTodo(req.user._id, todoId, req.body);
+		res.json(todo);
+	} catch (err) {
+		res.status(400).json({ message: err.message });
+	}
+}
+
+export async function deleteTodo(req, res) {
+	try {
+		const { todoId } = req.params;
+		const result = await todoService.deleteTodo(req.user._id, todoId);
+		res.json(result);
+	} catch (err) {
+		res.status(400).json({ message: err.message });
+	}
+}
+
 export async function createGroupTodo(req, res) {
 	try {
 		const { groupId } = req.params;

@@ -6,6 +6,8 @@ import userRoutes from './routes/user.routes.js';
 import todoRoutes from './routes/todo.routes.js';
 import groupRoutes from './routes/group.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import searchRoutes from './routes/search.routes.js';
+import * as typesenseService from './services/typesense.service.js';
 
 
 // Create Express app
@@ -36,6 +38,7 @@ app.use('/api/todos', todoRoutes);
 
 app.use('/api/groups', groupRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/search', searchRoutes);
 
 
 // Not found handler
@@ -68,10 +71,23 @@ async function ensureDbConnected() {
 	return dbConnectPromise;
 }
 
+// Initialize Typesense when the server starts
+async function initializeTypesense() {
+	try {
+		await typesenseService.initTypesense();
+		console.log('Typesense initialized successfully');
+	} catch (error) {
+		console.error('Failed to initialize Typesense:', error);
+	}
+}
+
 // Handler for SvelteKit endpoints to call Express
 export async function handleRequest(method, url, body, headers, cookies) {
 	// Ensure DB connection
 	ensureDbConnected().catch(() => {});
+	
+	// Initialize Typesense
+	initializeTypesense().catch(() => {});
 
 	console.log(`handleRequest: ${method} ${url}`);
 

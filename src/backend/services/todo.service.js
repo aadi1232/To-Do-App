@@ -1,5 +1,6 @@
 import Todo from '../models/todo.model.js';
 import Group from '../models/group.model.js';
+import * as typesenseService from './typesense.service.js';
 
 export async function createTodo(userId, data) {
 	const todoData = {
@@ -8,11 +9,60 @@ export async function createTodo(userId, data) {
 		createdBy: userId
 	};
 
-	return await Todo.create(todoData);
+	const todo = await Todo.create(todoData);
+	
+	// Index the todo in Typesense
+	try {
+		await typesenseService.indexTodo(todo);
+	} catch (error) {
+		console.error('Failed to index todo in Typesense:', error);
+		// We don't throw here to avoid disrupting the main flow
+	}
+
+	return todo;
 }
 
 export async function getTodosByUser(userId) {
 	return await Todo.find({ user: userId, group: null }).sort({ createdAt: -1 });
+}
+
+export async function updateTodo(userId, todoId, data) {
+	const todo = await Todo.findOne({ _id: todoId, user: userId });
+	
+	if (!todo) {
+		throw new Error('Todo not found');
+	}
+	
+	Object.assign(todo, data);
+	const updatedTodo = await todo.save();
+	
+	// Update the todo in Typesense
+	try {
+		await typesenseService.indexTodo(updatedTodo);
+	} catch (error) {
+		console.error('Failed to update todo in Typesense:', error);
+	}
+	
+	return updatedTodo;
+}
+
+export async function deleteTodo(userId, todoId) {
+	const todo = await Todo.findOne({ _id: todoId, user: userId });
+	
+	if (!todo) {
+		throw new Error('Todo not found');
+	}
+	
+	await todo.remove();
+	
+	// Delete the todo from Typesense
+	try {
+		await typesenseService.deleteTodoFromIndex(todoId);
+	} catch (error) {
+		console.error('Failed to delete todo from Typesense:', error);
+	}
+	
+	return { message: 'Todo deleted successfully' };
 }
 
 export async function createGroupTodo(userId, groupId, data) {
