@@ -1,19 +1,20 @@
-<script>
+<script lang="ts">
   import { todos } from '../stores/todos.js';
   import { getSuggestions } from '../utils/ai/suggestTask.js';
   import { onDestroy } from 'svelte';
   
   let todoText = '';
-  let suggestions = [];
+  let suggestions: string[] = [];
   let loading = false;
   let suggestionsVisible = false;
   let selectedIndex = -1;
-  let debounceTimeout;
+  let debounceTimeout: number | null = null;
   
   // Fetch suggestions when input changes
-  async function fetchSuggestions() {
+  async function fetchSuggestions(): Promise<void> {
     if (todoText.trim().length < 2) {
       suggestions = [];
+      suggestionsVisible = false;
       return;
     }
     
@@ -31,15 +32,17 @@
   }
   
   // Debounce input to avoid too many API calls
-  function handleInput() {
-    clearTimeout(debounceTimeout);
-    debounceTimeout = setTimeout(() => {
+  function handleInput(): void {
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+    debounceTimeout = window.setTimeout(() => {
       fetchSuggestions();
     }, 500); // 500ms debounce
   }
   
   // Submit the form to add a new todo
-  async function handleSubmit() {
+  async function handleSubmit(): Promise<void> {
     if (!todoText.trim()) return;
     
     try {
@@ -53,7 +56,7 @@
   }
   
   // Handle arrow key navigation and selection
-  function handleKeydown(event) {
+  function handleKeydown(event: KeyboardEvent): void {
     if (!suggestionsVisible) return;
     
     switch (event.key) {
@@ -80,14 +83,16 @@
   }
   
   // Select a suggestion
-  function selectSuggestion(suggestion) {
+  function selectSuggestion(suggestion: string): void {
     todoText = suggestion;
     suggestionsVisible = false;
   }
   
   // Clean up debounce timer
   onDestroy(() => {
-    clearTimeout(debounceTimeout);
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
   });
 </script>
 
@@ -107,31 +112,35 @@
         }}
         on:focus={() => {
           // Show suggestions again if we have any
-          suggestionsVisible = suggestions.length > 0;
+          if (suggestions.length > 0) {
+            suggestionsVisible = true;
+          }
         }}
         placeholder="Add a new todo..."
         class="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
       
-      {#if loading}
-        <div class="absolute right-3 top-2.5">
-          <div class="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
-        </div>
-      {/if}
-      
-      {#if suggestionsVisible && suggestions.length > 0}
-        <div class="absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-          <ul class="py-1">
-            {#each suggestions as suggestion, i}
-              <li
-                class="cursor-pointer px-4 py-2 hover:bg-gray-100 {i === selectedIndex ? 'bg-gray-100' : ''}"
-                on:mousedown={() => selectSuggestion(suggestion)}
-                on:mouseover={() => (selectedIndex = i)}
-              >
-                {suggestion}
-              </li>
-            {/each}
-          </ul>
+      {#if suggestionsVisible}
+        <div class="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-200 bg-white shadow-lg">
+          <div class="py-1">
+            {#if loading}
+              <div class="flex flex-col items-center py-3">
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500 mb-2"></div>
+                <p class="text-xs text-gray-500">AI is generating suggestions...</p>
+              </div>
+            {:else}
+              <p class="px-3 py-2 text-xs font-medium text-gray-500">AI suggestions:</p>
+              {#each suggestions as suggestion, i}
+                <div 
+                  class="cursor-pointer px-3 py-2 hover:bg-gray-100 {i === selectedIndex ? 'bg-gray-100' : ''}"
+                  on:mousedown={() => selectSuggestion(suggestion)}
+                  on:mouseover={() => (selectedIndex = i)}
+                >
+                  {suggestion}
+                </div>
+              {/each}
+            {/if}
+          </div>
         </div>
       {/if}
     </div>
