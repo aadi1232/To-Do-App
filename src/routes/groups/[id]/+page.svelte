@@ -3,7 +3,13 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { inviteUserToGroup } from '$lib/api/groups';
+	import {
+		inviteUserToGroup,
+		updateMemberRole,
+		removeMember,
+		updateGroup,
+		deleteGroup
+	} from '$lib/api/groups';
 	import { getGroupTodos, createGroupTodo, updateGroupTodo, deleteGroupTodo } from '$lib/api/todos';
 	import type { Group, User, Todo } from '$lib/types';
 
@@ -24,6 +30,17 @@
 	let activeTab = 'todos';
 	let todoLoading = false;
 	let inviteLoading = false;
+
+	// Add more form states
+	let editGroupName = '';
+	let editImageUrl = '';
+	let confirmationName = '';
+	let showDeleteConfirmation = false;
+	let selectedMemberId = '';
+	let newMemberRole: 'co-lead' | 'elder' | 'member' = 'member';
+	let memberActionLoading = false;
+	let deleteLoading = false;
+	let updateGroupLoading = false;
 
 	onMount(async () => {
 		try {
@@ -61,6 +78,12 @@
 
 			// Fetch todos for the group
 			await fetchTodos();
+
+			// Set initial values for edit form
+			if (group) {
+				editGroupName = group.name;
+				editImageUrl = group.imageUrl || '';
+			}
 
 			loading = false;
 		} catch (err) {
@@ -201,6 +224,108 @@
 
 	function canAddTodos() {
 		return userRole !== 'member'; // admin, co-lead, elder can add todos
+	}
+
+	async function handleUpdateGroup() {
+		if (!editGroupName.trim()) {
+			showNotification('Group name cannot be empty', 'error');
+			return;
+		}
+
+		updateGroupLoading = true;
+
+		try {
+			const updatedGroup = await updateGroup(groupId, {
+				name: editGroupName,
+				imageUrl: editImageUrl
+			});
+
+			if (updatedGroup) {
+				group = updatedGroup;
+				showNotification('Group details updated successfully');
+			}
+		} catch (err) {
+			console.error('Error updating group:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to update group', 'error');
+		} finally {
+			updateGroupLoading = false;
+		}
+	}
+
+	async function handleDeleteGroup() {
+		if (confirmationName !== group?.name) {
+			showNotification('Group name confirmation does not match', 'error');
+			return;
+		}
+
+		deleteLoading = true;
+
+		try {
+			const result = await deleteGroup(groupId, confirmationName);
+
+			if (result.success) {
+				showNotification('Group deleted successfully');
+				// Redirect after a delay to see the notification
+				setTimeout(() => {
+					goto('/groups');
+				}, 1500);
+			}
+		} catch (err) {
+			console.error('Error deleting group:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to delete group', 'error');
+		} finally {
+			deleteLoading = false;
+		}
+	}
+
+	async function handleRoleChange(memberId: string) {
+		if (!memberId || !newMemberRole) {
+			showNotification('Member and role are required', 'error');
+			return;
+		}
+
+		memberActionLoading = true;
+
+		try {
+			const updatedGroup = await updateMemberRole(groupId, memberId, newMemberRole);
+
+			if (updatedGroup) {
+				// Ensure the group state is properly updated with the new data
+				group = updatedGroup;
+				showNotification(`Member role updated to ${newMemberRole}`);
+				// Clear the selected member ID to hide the role update form
+				setTimeout(() => {
+					selectedMemberId = '';
+				}, 100);
+			}
+		} catch (err) {
+			console.error('Error updating member role:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to update role', 'error');
+		} finally {
+			memberActionLoading = false;
+		}
+	}
+
+	async function handleRemoveMember(memberId: string) {
+		memberActionLoading = true;
+
+		try {
+			const updatedGroup = await removeMember(groupId, memberId);
+
+			if (updatedGroup) {
+				group = updatedGroup;
+				showNotification('Member removed successfully');
+			}
+		} catch (err) {
+			console.error('Error removing member:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to remove member', 'error');
+		} finally {
+			memberActionLoading = false;
+		}
+	}
+
+	function canManageMembers() {
+		return userRole === 'admin' || userRole === 'co-lead' || userRole === 'elder';
 	}
 </script>
 
@@ -474,41 +599,177 @@
 										<span class="text-xs text-gray-500">
 											{member.invitationStatus === 'pending' ? '(Pending)' : ''}
 										</span>
+
+										{#if (userRole === 'admin' || (userRole === 'co-lead' && member.role !== 'admin' && member.role !== 'co-lead')) && typeof member.user !== 'string' && member.user._id !== currentUser?._id && member.invitationStatus === 'accepted'}
+											<div class="ml-2 flex space-x-2">
+												<button
+													on:click={() =>
+														(selectedMemberId =
+															typeof member.user === 'string' ? member.user : member.user._id)}
+													class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
+													title="Change role"
+												>
+													Change Role
+												</button>
+
+												<button
+													on:click={() =>
+														handleRemoveMember(
+															typeof member.user === 'string' ? member.user : member.user._id
+														)}
+													class="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+													title="Remove"
+													disabled={memberActionLoading}
+												>
+													{memberActionLoading ? '...' : 'Remove'}
+												</button>
+											</div>
+										{/if}
 									</div>
 								</li>
+
+								{#if selectedMemberId === (typeof member.user === 'string' ? member.user : member.user._id)}
+									<li class="rounded border border-blue-100 bg-blue-50 p-4">
+										<h4 class="mb-2 font-medium">Change role for {getMemberName(member)}</h4>
+										<div class="flex items-center space-x-3">
+											<select
+												bind:value={newMemberRole}
+												class="rounded border border-gray-300 px-2 py-1 text-sm"
+											>
+												<option value="co-lead">Co-Lead</option>
+												<option value="elder">Elder</option>
+												<option value="member">Member</option>
+											</select>
+
+											<button
+												on:click={() =>
+													handleRoleChange(
+														typeof member.user === 'string' ? member.user : member.user._id
+													)}
+												class="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
+												disabled={memberActionLoading}
+											>
+												{memberActionLoading ? 'Updating...' : 'Update Role'}
+											</button>
+
+											<button
+												on:click={() => (selectedMemberId = '')}
+												class="rounded px-2 py-1 text-sm text-gray-600 hover:text-gray-800"
+											>
+												Cancel
+											</button>
+										</div>
+									</li>
+								{/if}
 							{/each}
 						</ul>
 					</div>
 				{:else if activeTab === 'settings' && isAdmin()}
 					<div class="settings-section">
-						<h2 class="mb-4 text-xl font-medium">Group Settings</h2>
+						<h2 class="mb-6 text-xl font-medium">Group Settings</h2>
 
-						<div class="space-y-4">
-							<div class="rounded border border-gray-200 bg-gray-50 p-4">
-								<h3 class="mb-2 font-medium">Manage Group</h3>
-								<p class="mb-4 text-sm text-gray-600">
-									You can update group settings or delete the group.
-								</p>
+						<!-- Group Edit Form -->
+						<div class="mb-8 rounded border border-gray-200 bg-white p-6 shadow-sm">
+							<h3 class="mb-4 text-lg font-medium">Edit Group</h3>
 
-								<div class="flex space-x-2">
-									<button class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-										Edit Group
-									</button>
-									<button class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700">
-										Delete Group
-									</button>
+							<form on:submit|preventDefault={handleUpdateGroup}>
+								<div class="mb-4">
+									<label for="groupName" class="mb-1 block text-sm font-medium text-gray-700">
+										Group Name
+									</label>
+									<input
+										id="groupName"
+										type="text"
+										bind:value={editGroupName}
+										class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+										required
+									/>
 								</div>
-							</div>
 
-							<div class="rounded border border-gray-200 bg-gray-50 p-4">
-								<h3 class="mb-2 font-medium">Member Permissions</h3>
-								<p class="text-sm text-gray-600">
-									<strong>Admin:</strong> Full control over group and members<br />
-									<strong>Co-lead:</strong> Can add/remove todos and members<br />
-									<strong>Elder:</strong> Can add/remove todos but not members<br />
-									<strong>Member:</strong> Can only view and complete todos
+								<div class="mb-4">
+									<label for="imageUrl" class="mb-1 block text-sm font-medium text-gray-700">
+										Group Image URL
+									</label>
+									<input
+										id="imageUrl"
+										type="text"
+										bind:value={editImageUrl}
+										placeholder="https://example.com/image.jpg"
+										class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+									/>
+									<p class="mt-1 text-xs text-gray-500">Leave blank for auto-generated initials</p>
+								</div>
+
+								<button
+									type="submit"
+									class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+									disabled={updateGroupLoading}
+								>
+									{updateGroupLoading ? 'Updating...' : 'Update Group'}
+								</button>
+							</form>
+						</div>
+
+						<!-- Delete Group Section -->
+						<div class="rounded border border-red-200 bg-red-50 p-6">
+							<h3 class="mb-4 text-lg font-medium text-red-700">Danger Zone</h3>
+
+							{#if !showDeleteConfirmation}
+								<p class="mb-4 text-sm text-gray-600">
+									Deleting the group will permanently remove all group data, including todos and
+									member relationships. This action cannot be undone.
 								</p>
-							</div>
+
+								<button
+									on:click={() => (showDeleteConfirmation = true)}
+									class="rounded border border-red-600 bg-white px-4 py-2 text-red-600 hover:bg-red-50"
+								>
+									Delete Group
+								</button>
+							{:else}
+								<div class="mb-6 rounded border border-red-300 bg-red-100 p-4 text-sm text-red-800">
+									<p class="mb-2 font-medium">Warning: This action cannot be undone</p>
+									<p>
+										Please type <strong>{group.name}</strong> below to confirm deletion.
+									</p>
+								</div>
+
+								<form on:submit|preventDefault={handleDeleteGroup} class="space-y-4">
+									<div>
+										<label for="confirmName" class="mb-1 block text-sm font-medium text-gray-700">
+											Confirm group name
+										</label>
+										<input
+											id="confirmName"
+											type="text"
+											bind:value={confirmationName}
+											placeholder="Enter group name to confirm"
+											class="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none"
+										/>
+									</div>
+
+									<div class="flex space-x-3">
+										<button
+											type="submit"
+											class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-50"
+											disabled={deleteLoading || confirmationName !== group.name}
+										>
+											{deleteLoading ? 'Deleting...' : 'Permanently Delete Group'}
+										</button>
+
+										<button
+											type="button"
+											on:click={() => {
+												showDeleteConfirmation = false;
+												confirmationName = '';
+											}}
+											class="rounded border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
+										>
+											Cancel
+										</button>
+									</div>
+								</form>
+							{/if}
 						</div>
 					</div>
 				{/if}

@@ -33,6 +33,17 @@ export interface Group {
 	updatedAt: string;
 }
 
+export interface CreateGroupData {
+	name: string;
+	imageUrl?: string;
+	invitees?: string[];
+}
+
+export interface UpdateGroupData {
+	name?: string;
+	imageUrl?: string;
+}
+
 export interface GroupMember {
 	_id?: string;
 	user: string | User;

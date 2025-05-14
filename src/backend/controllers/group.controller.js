@@ -1,5 +1,6 @@
 import Group from '../models/group.model.js';
 import User from '../models/user.model.js';
+import Todo from '../models/todo.model.js';
 
 // Create a new group
 export const createGroup = async (req, res) => {
@@ -250,10 +251,15 @@ export const updateMemberRole = async (req, res) => {
 		memberToUpdate.role = newRole;
 		await group.save();
 
+		// Populate the group data for response
+		const populatedGroup = await Group.findById(group._id)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
 		res.status(200).json({
 			success: true,
 			message: 'Member role updated successfully',
-			group
+			group: populatedGroup
 		});
 	} catch (error) {
 		console.error('Error updating member role:', error);
@@ -339,10 +345,15 @@ export const removeMember = async (req, res) => {
 
 		await group.save();
 
+		// Populate the group data for response
+		const populatedGroup = await Group.findById(group._id)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
 		res.status(200).json({
 			success: true,
 			message: 'Member removed successfully',
-			group
+			group: populatedGroup
 		});
 	} catch (error) {
 		console.error('Error removing member:', error);
@@ -471,6 +482,132 @@ export const getGroupById = async (req, res) => {
 		res.status(500).json({
 			success: false,
 			message: 'Failed to fetch group',
+			error: error.message
+		});
+	}
+};
+
+// Update group details
+export const updateGroup = async (req, res) => {
+	try {
+		const { id: groupId } = req.params;
+		const userId = req.user._id;
+		const { name, imageUrl } = req.body;
+
+		// Find the group
+		const group = await Group.findById(groupId);
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Group not found'
+			});
+		}
+
+		// Check if user is admin or co-lead
+		const currentUserMember = group.members.find(
+			(member) => member.user.toString() === userId.toString()
+		);
+
+		if (!currentUserMember) {
+			return res.status(403).json({
+				success: false,
+				message: 'You are not a member of this group'
+			});
+		}
+
+		if (currentUserMember.role !== 'admin' && currentUserMember.role !== 'co-lead') {
+			return res.status(403).json({
+				success: false,
+				message: 'Only admin and co-leads can update group details'
+			});
+		}
+
+		// Update fields
+		if (name) group.name = name;
+		if (imageUrl) group.imageUrl = imageUrl;
+
+		await group.save();
+
+		// Populate user details for response
+		const populatedGroup = await Group.findById(group._id)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
+		res.status(200).json({
+			success: true,
+			message: 'Group details updated successfully',
+			group: populatedGroup
+		});
+	} catch (error) {
+		console.error('Error updating group:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to update group',
+			error: error.message
+		});
+	}
+};
+
+// Delete group with name confirmation
+export const deleteGroup = async (req, res) => {
+	try {
+		const { id: groupId } = req.params;
+		const userId = req.user._id;
+		const { confirmationName } = req.body;
+
+		// Find the group
+		const group = await Group.findById(groupId);
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Group not found'
+			});
+		}
+
+		// Check if user is admin
+		const currentUserMember = group.members.find(
+			(member) => member.user.toString() === userId.toString()
+		);
+
+		if (!currentUserMember) {
+			return res.status(403).json({
+				success: false,
+				message: 'You are not a member of this group'
+			});
+		}
+
+		if (currentUserMember.role !== 'admin') {
+			return res.status(403).json({
+				success: false,
+				message: 'Only the group admin can delete the group'
+			});
+		}
+
+		// Check if confirmation name matches
+		if (confirmationName !== group.name) {
+			return res.status(400).json({
+				success: false,
+				message: 'Group name confirmation does not match'
+			});
+		}
+
+		// Delete all todos associated with this group
+		await Todo.deleteMany({ group: groupId });
+
+		// Delete the group
+		await Group.findByIdAndDelete(groupId);
+
+		res.status(200).json({
+			success: true,
+			message: 'Group and associated todos deleted successfully'
+		});
+	} catch (error) {
+		console.error('Error deleting group:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to delete group',
 			error: error.message
 		});
 	}

@@ -1,4 +1,4 @@
-import type { Group, GroupInvitation, CreateGroupData } from '../types';
+import type { Group, GroupInvitation, CreateGroupData, UpdateGroupData } from '../types';
 
 /**
  * API client functions for group operations
@@ -120,7 +120,8 @@ export async function updateMemberRole(
 		throw new Error(error.message || 'Failed to update member role');
 	}
 
-	return response.json();
+	const data = await response.json();
+	return data.group;
 }
 
 /**
@@ -144,7 +145,8 @@ export async function removeMember(groupId: string, memberId: string): Promise<G
 		throw new Error(error.message || 'Failed to remove member');
 	}
 
-	return response.json();
+	const data = await response.json();
+	return data.group;
 }
 
 /**
@@ -166,6 +168,77 @@ export async function inviteUserToGroup(groupId: string, email: string): Promise
 	if (!response.ok) {
 		const error = await response.json();
 		throw new Error(error.message || 'Failed to invite user');
+	}
+
+	return response.json();
+}
+
+/**
+ * Get a group by ID
+ * @param groupId - ID of the group
+ * @returns Group object
+ */
+export async function getGroupById(groupId: string): Promise<Group> {
+	const response = await fetch(`/api/groups/${groupId}`, {
+		credentials: 'include'
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Failed to fetch group');
+	}
+
+	const data = await response.json();
+	return data.group;
+}
+
+/**
+ * Update group details
+ * @param groupId - ID of the group
+ * @param groupData - Updated group data (name, imageUrl)
+ * @returns Updated group object
+ */
+export async function updateGroup(groupId: string, groupData: UpdateGroupData): Promise<Group> {
+	const response = await fetch(`/api/groups/${groupId}`, {
+		method: 'PUT',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		credentials: 'include',
+		body: JSON.stringify(groupData)
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Failed to update group');
+	}
+
+	const data = await response.json();
+	return data.group;
+}
+
+/**
+ * Delete a group
+ * @param groupId - ID of the group
+ * @param confirmationName - Group name to confirm deletion
+ * @returns Success message
+ */
+export async function deleteGroup(
+	groupId: string,
+	confirmationName: string
+): Promise<{ success: boolean; message: string }> {
+	const response = await fetch(`/api/groups/${groupId}`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		credentials: 'include',
+		body: JSON.stringify({ confirmationName })
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Failed to delete group');
 	}
 
 	return response.json();

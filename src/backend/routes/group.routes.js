@@ -7,7 +7,9 @@ import {
 	updateMemberRole,
 	removeMember,
 	inviteToGroup,
-	getGroupById
+	getGroupById,
+	updateGroup,
+	deleteGroup
 } from '../controllers/group.controller.js';
 import { protect } from '../middlewares/auth.middleware.js';
 
@@ -29,5 +31,7 @@ router.delete('/members', removeMember);
 // Dynamic group ID routes (these must come AFTER any static segment routes)
 router.get('/:id', getGroupById);
 router.post('/:id/invite', inviteToGroup);
+router.put('/:id', updateGroup);
+router.delete('/:id', deleteGroup);
 
 export default router;
