@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import Header from '$lib/components/Header.svelte';
 	import { getPendingInvitations, respondToInvitation, getUserGroups } from '$lib/api';
 	import type { User, GroupInvitation, Group } from '$lib/types';
 	import { fade } from 'svelte/transition';
