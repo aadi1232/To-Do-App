@@ -9,13 +9,7 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler",
-		"paths": {
-			"$lib": ["./src/lib"],
-			"$lib/*": ["./src/lib/*"],
-			"$backend": ["./src/backend"],
-			"$backend/*": ["./src/backend/*"]
-		}
+		"moduleResolution": "bundler"
 	},
 	"include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
 	"exclude": ["node_modules/*", ".svelte-kit/*", "build/*"]

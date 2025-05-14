@@ -18,9 +18,9 @@ router.post('/', createTodo);
 router.get('/', getTodos);
 
 // Group todo routes
-router.post('/group/:groupId', createGroupTodo);
-router.get('/group/:groupId', getGroupTodos);
-router.put('/group/:todoId', updateGroupTodo);
-router.delete('/group/:todoId', deleteGroupTodo);
+router.post('/by-group/:groupId', createGroupTodo);
+router.get('/by-group/:groupId', getGroupTodos);
+router.put('/by-id/:todoId', updateGroupTodo);
+router.delete('/by-id/:todoId', deleteGroupTodo);
 
 export default router;

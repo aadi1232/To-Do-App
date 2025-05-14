@@ -353,3 +353,125 @@ export const removeMember = async (req, res) => {
 		});
 	}
 };
+
+// Invite a user to a group
+export const inviteToGroup = async (req, res) => {
+	try {
+		const { id: groupId } = req.params;
+		const { email } = req.body;
+		const userId = req.user._id;
+
+		// Find the group
+		const group = await Group.findById(groupId);
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Group not found'
+			});
+		}
+
+		// Check if the requesting user is the admin or co-lead
+		const requestingMember = group.members.find(
+			(member) => member.user.toString() === userId.toString()
+		);
+		if (!requestingMember || !['admin', 'co-lead'].includes(requestingMember.role)) {
+			return res.status(403).json({
+				success: false,
+				message: 'You do not have permission to invite users to this group'
+			});
+		}
+
+		// Find the user by email
+		const userToInvite = await User.findOne({ email });
+		if (!userToInvite) {
+			return res.status(404).json({
+				success: false,
+				message: 'User with this email not found'
+			});
+		}
+
+		// Check if user is already a member
+		const isMember = group.members.some(
+			(member) => member.user.toString() === userToInvite._id.toString()
+		);
+
+		if (isMember) {
+			return res.status(400).json({
+				success: false,
+				message: 'User is already a member of this group'
+			});
+		}
+
+		// Add user to the group
+		group.members.push({
+			user: userToInvite._id,
+			role: 'member',
+			invitationStatus: 'pending',
+			addedBy: userId
+		});
+
+		await group.save();
+
+		// Populate user details for response
+		const populatedGroup = await Group.findById(group._id)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
+		res.status(200).json({
+			success: true,
+			message: 'Invitation sent successfully',
+			group: populatedGroup
+		});
+	} catch (error) {
+		console.error('Error inviting user to group:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to invite user',
+			error: error.message
+		});
+	}
+};
+
+// Get group by ID
+export const getGroupById = async (req, res) => {
+	try {
+		const { id: groupId } = req.params;
+		const userId = req.user._id;
+
+		const group = await Group.findById(groupId)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Group not found'
+			});
+		}
+
+		// Check if user is a member of the group
+		const isMember = group.members.some(
+			(member) =>
+				member.user._id.toString() === userId.toString() && member.invitationStatus === 'accepted'
+		);
+
+		if (!isMember) {
+			return res.status(403).json({
+				success: false,
+				message: 'You do not have access to this group'
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			group
+		});
+	} catch (error) {
+		console.error('Error fetching group:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to fetch group',
+			error: error.message
+		});
+	}
+};

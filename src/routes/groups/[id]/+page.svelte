@@ -3,17 +3,27 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import type { Group, User } from '$lib/types';
+	import { inviteUserToGroup } from '$lib/api/groups';
+	import { getGroupTodos, createGroupTodo, updateGroupTodo, deleteGroupTodo } from '$lib/api/todos';
+	import type { Group, User, Todo } from '$lib/types';
 
 	const groupId = $page.params.id;
 
 	let group: Group | null = null;
+	let todos: Todo[] = [];
 	let loading = true;
 	let error: string | null = null;
 	let currentUser: User | null = null;
 	let userRole: string | null = null;
 	let notificationMessage: string | null = null;
 	let notificationType: 'success' | 'error' = 'success';
+
+	// Form states
+	let newTodoTitle = '';
+	let newInviteEmail = '';
+	let activeTab = 'todos';
+	let todoLoading = false;
+	let inviteLoading = false;
 
 	onMount(async () => {
 		try {
@@ -49,6 +59,9 @@
 				}
 			}
 
+			// Fetch todos for the group
+			await fetchTodos();
+
 			loading = false;
 		} catch (err) {
 			console.error('Error loading group:', err);
@@ -56,6 +69,95 @@
 			loading = false;
 		}
 	});
+
+	async function fetchTodos() {
+		try {
+			const fetchedTodos = await getGroupTodos(groupId);
+			todos = fetchedTodos;
+		} catch (err) {
+			console.error('Error fetching todos:', err);
+			showNotification('Failed to load todos', 'error');
+		}
+	}
+
+	async function handleAddTodo() {
+		if (!newTodoTitle.trim()) {
+			showNotification('Todo title cannot be empty', 'error');
+			return;
+		}
+
+		todoLoading = true;
+
+		try {
+			await createGroupTodo(groupId, { title: newTodoTitle.trim() });
+			newTodoTitle = '';
+			await fetchTodos();
+			showNotification('Todo added successfully');
+		} catch (err) {
+			console.error('Error adding todo:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to add todo', 'error');
+		} finally {
+			todoLoading = false;
+		}
+	}
+
+	async function handleToggleTodo(todo: Todo) {
+		try {
+			await updateGroupTodo(todo._id, { completed: !todo.completed });
+			await fetchTodos();
+		} catch (err) {
+			console.error('Error updating todo:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to update todo', 'error');
+		}
+	}
+
+	async function handleDeleteTodo(todo: Todo) {
+		try {
+			await deleteGroupTodo(todo._id);
+			await fetchTodos();
+			showNotification('Todo deleted successfully');
+		} catch (err) {
+			console.error('Error deleting todo:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to delete todo', 'error');
+		}
+	}
+
+	async function handleInviteUser() {
+		if (!newInviteEmail.trim()) {
+			showNotification('Email cannot be empty', 'error');
+			return;
+		}
+
+		// Basic email validation
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(newInviteEmail)) {
+			showNotification('Please enter a valid email address', 'error');
+			return;
+		}
+
+		inviteLoading = true;
+
+		try {
+			const updatedGroup = await inviteUserToGroup(groupId, newInviteEmail);
+			newInviteEmail = '';
+
+			// Update the local group data
+			if (updatedGroup) {
+				group = updatedGroup;
+			}
+
+			showNotification('Invitation sent successfully');
+		} catch (err) {
+			console.error('Error inviting user:', err);
+			showNotification(err instanceof Error ? err.message : 'Failed to invite user', 'error');
+		} finally {
+			inviteLoading = false;
+		}
+	}
+
+	function changeTab(tab: string) {
+		activeTab = tab;
+	}
 
 	function showNotification(message: string, type: 'success' | 'error' = 'success') {
 		notificationMessage = message;
@@ -91,6 +193,14 @@
 			default:
 				return 'bg-gray-100 text-gray-800';
 		}
+	}
+
+	function isAdmin() {
+		return userRole === 'admin' || userRole === 'co-lead';
+	}
+
+	function canAddTodos() {
+		return userRole !== 'member'; // admin, co-lead, elder can add todos
 	}
 </script>
 
@@ -188,27 +298,220 @@
 			<!-- Group Tabs -->
 			<div class="mb-6 border-b border-gray-200">
 				<nav class="-mb-px flex space-x-8">
-					<a href="#todos" class="border-b-2 border-black px-1 py-4 text-sm font-medium">
+					<button
+						class="px-1 py-4 text-sm font-medium {activeTab === 'todos'
+							? 'border-b-2 border-black text-black'
+							: 'text-gray-500 hover:text-gray-700'}"
+						on:click={() => changeTab('todos')}
+					>
 						To-Dos
-					</a>
-					<a
-						href="#members"
-						class="px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700"
+					</button>
+					<button
+						class="px-1 py-4 text-sm font-medium {activeTab === 'members'
+							? 'border-b-2 border-black text-black'
+							: 'text-gray-500 hover:text-gray-700'}"
+						on:click={() => changeTab('members')}
 					>
 						Members
-					</a>
-					<a
-						href="#settings"
-						class="px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700"
-					>
-						Settings
-					</a>
+					</button>
+					{#if isAdmin()}
+						<button
+							class="px-1 py-4 text-sm font-medium {activeTab === 'settings'
+								? 'border-b-2 border-black text-black'
+								: 'text-gray-500 hover:text-gray-700'}"
+							on:click={() => changeTab('settings')}
+						>
+							Settings
+						</button>
+					{/if}
 				</nav>
 			</div>
 
-			<!-- Group Content - Placeholder -->
+			<!-- Group Content -->
 			<div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-				<p class="text-center text-gray-600">Group content will be displayed here</p>
+				{#if activeTab === 'todos'}
+					<div class="todos-section">
+						<h2 class="mb-4 text-xl font-medium">Group To-Dos</h2>
+
+						{#if canAddTodos()}
+							<form class="mb-6" on:submit|preventDefault={handleAddTodo}>
+								<div class="flex">
+									<input
+										type="text"
+										bind:value={newTodoTitle}
+										placeholder="Add a new todo..."
+										class="flex-grow rounded-l border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+									/>
+									<button
+										type="submit"
+										class="rounded-r bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+										disabled={todoLoading || !newTodoTitle.trim()}
+									>
+										{todoLoading ? 'Adding...' : 'Add'}
+									</button>
+								</div>
+							</form>
+						{/if}
+
+						{#if todos.length === 0}
+							<p class="py-8 text-center text-gray-500">
+								No todos yet. {canAddTodos() ? 'Add one to get started!' : ''}
+							</p>
+						{:else}
+							<ul class="space-y-2">
+								{#each todos as todo}
+									<li
+										class="flex items-center justify-between rounded border border-gray-200 bg-white p-3 shadow-sm"
+									>
+										<div class="flex items-center">
+											<input
+												type="checkbox"
+												checked={todo.completed}
+												on:change={() => handleToggleTodo(todo)}
+												class="mr-3 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+											/>
+											<span class={todo.completed ? 'text-gray-500 line-through' : ''}>
+												{todo.title}
+											</span>
+										</div>
+										<div class="flex items-center space-x-2">
+											<span class="text-xs text-gray-500">
+												{typeof todo.createdBy === 'string' ? 'Unknown' : todo.createdBy.username}
+											</span>
+											{#if canAddTodos()}
+												<button
+													on:click={() => handleDeleteTodo(todo)}
+													class="ml-2 text-red-500 hover:text-red-700"
+													title="Delete"
+												>
+													<svg
+														class="h-5 w-5"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M6 18L18 6M6 6l12 12"
+														></path>
+													</svg>
+												</button>
+											{/if}
+										</div>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				{:else if activeTab === 'members'}
+					<div class="members-section">
+						<h2 class="mb-4 text-xl font-medium">Group Members</h2>
+
+						{#if isAdmin()}
+							<div class="mb-6">
+								<form on:submit|preventDefault={handleInviteUser} class="flex items-end space-x-2">
+									<div class="flex-grow">
+										<label for="inviteEmail" class="mb-1 block text-sm font-medium text-gray-700">
+											Invite New Member
+										</label>
+										<input
+											id="inviteEmail"
+											type="email"
+											bind:value={newInviteEmail}
+											placeholder="Enter email address"
+											class="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+										/>
+									</div>
+									<button
+										type="submit"
+										class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+										disabled={inviteLoading || !newInviteEmail.trim()}
+									>
+										{inviteLoading ? 'Sending...' : 'Invite'}
+									</button>
+								</form>
+							</div>
+						{/if}
+
+						<ul class="space-y-4">
+							{#each group.members as member}
+								<li
+									class="flex items-center justify-between rounded border border-gray-200 bg-white p-4 shadow-sm"
+								>
+									<div class="flex items-center">
+										<div class="mr-3 h-10 w-10 overflow-hidden rounded-full bg-gray-200">
+											{#if typeof member.user !== 'string' && member.user.profileImage}
+												<img
+													src={member.user.profileImage}
+													alt={getMemberName(member)}
+													class="h-full w-full object-cover"
+												/>
+											{:else}
+												<div
+													class="flex h-full w-full items-center justify-center bg-blue-500 text-white"
+												>
+													{getMemberName(member).charAt(0).toUpperCase()}
+												</div>
+											{/if}
+										</div>
+										<div>
+											<p class="font-medium">{getMemberName(member)}</p>
+											<p class="text-xs text-gray-500">
+												{getMemberEmail(member)}
+											</p>
+										</div>
+									</div>
+									<div class="flex items-center space-x-2">
+										<span
+											class="rounded-full px-3 py-1 text-xs font-medium {getRoleBadgeClass(
+												member.role
+											)}"
+										>
+											{member.role}
+										</span>
+										<span class="text-xs text-gray-500">
+											{member.invitationStatus === 'pending' ? '(Pending)' : ''}
+										</span>
+									</div>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{:else if activeTab === 'settings' && isAdmin()}
+					<div class="settings-section">
+						<h2 class="mb-4 text-xl font-medium">Group Settings</h2>
+
+						<div class="space-y-4">
+							<div class="rounded border border-gray-200 bg-gray-50 p-4">
+								<h3 class="mb-2 font-medium">Manage Group</h3>
+								<p class="mb-4 text-sm text-gray-600">
+									You can update group settings or delete the group.
+								</p>
+
+								<div class="flex space-x-2">
+									<button class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+										Edit Group
+									</button>
+									<button class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700">
+										Delete Group
+									</button>
+								</div>
+							</div>
+
+							<div class="rounded border border-gray-200 bg-gray-50 p-4">
+								<h3 class="mb-2 font-medium">Member Permissions</h3>
+								<p class="text-sm text-gray-600">
+									<strong>Admin:</strong> Full control over group and members<br />
+									<strong>Co-lead:</strong> Can add/remove todos and members<br />
+									<strong>Elder:</strong> Can add/remove todos but not members<br />
+									<strong>Member:</strong> Can only view and complete todos
+								</p>
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

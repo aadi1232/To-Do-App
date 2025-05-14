@@ -146,3 +146,27 @@ export async function removeMember(groupId: string, memberId: string): Promise<G
 
 	return response.json();
 }
+
+/**
+ * Invite a user to a group
+ * @param groupId - ID of the group
+ * @param email - Email of the user to invite
+ * @returns Updated group object
+ */
+export async function inviteUserToGroup(groupId: string, email: string): Promise<Group> {
+	const response = await fetch(`/api/groups/${groupId}/invite`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		credentials: 'include',
+		body: JSON.stringify({ email })
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Failed to invite user');
+	}
+
+	return response.json();
+}
