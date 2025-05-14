@@ -1,0 +1,355 @@
+import Group from '../models/group.model.js';
+import User from '../models/user.model.js';
+
+// Create a new group
+export const createGroup = async (req, res) => {
+	try {
+		const { name, imageUrl, invitees } = req.body;
+		const userId = req.user._id;
+		console.log(userId);
+
+		// Create a new group with the creator as admin
+		const group = new Group({
+			name,
+			imageUrl,
+			createdBy: userId,
+			members: [
+				{
+					user: userId,
+					role: 'admin',
+					invitationStatus: 'accepted',
+					addedBy: userId
+				}
+			]
+		});
+
+		// Process invitees if provided
+		if (invitees && invitees.length > 0) {
+			// Verify all emails exist as users
+			const emailList = invitees.map((invitee) => invitee.email);
+			const users = await User.find({ email: { $in: emailList } });
+
+			// Create a map of email to user ID for quick lookup
+			const emailToUserMap = {};
+			users.forEach((user) => {
+				emailToUserMap[user.email] = user._id;
+			});
+
+			// Add each invitee to the group
+			for (const invitee of invitees) {
+				const userId = emailToUserMap[invitee.email];
+
+				if (userId) {
+					group.members.push({
+						user: userId,
+						role: 'member', // Default role for invitees
+						invitationStatus: 'pending',
+						addedBy: req.user._id
+					});
+				}
+			}
+		}
+
+		await group.save();
+
+		// Populate user details for response
+		const populatedGroup = await Group.findById(group._id)
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
+		res.status(201).json({
+			success: true,
+			message: 'Group created successfully',
+			group: populatedGroup
+		});
+	} catch (error) {
+		console.error('Error creating group:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to create group',
+			error: error.message
+		});
+	}
+};
+
+// Get all groups for a user
+export const getUserGroups = async (req, res) => {
+	try {
+		const userId = req.user._id;
+
+		const groups = await Group.find({
+			'members.user': userId,
+			'members.invitationStatus': 'accepted'
+		})
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
+		res.status(200).json({
+			success: true,
+			groups
+		});
+	} catch (error) {
+		console.error('Error fetching user groups:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to fetch groups',
+			error: error.message
+		});
+	}
+};
+
+// Get pending invitations for a user
+export const getPendingInvitations = async (req, res) => {
+	try {
+		const userId = req.user._id;
+
+		const pendingGroups = await Group.find({
+			'members.user': userId,
+			'members.invitationStatus': 'pending'
+		})
+			.populate('members.user', 'username email profileImage')
+			.populate('createdBy', 'username email profileImage');
+
+		res.status(200).json({
+			success: true,
+			pendingInvitations: pendingGroups
+		});
+	} catch (error) {
+		console.error('Error fetching pending invitations:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to fetch pending invitations',
+			error: error.message
+		});
+	}
+};
+
+// Respond to group invitation (accept/decline)
+export const respondToInvitation = async (req, res) => {
+	try {
+		const { groupId, response } = req.body;
+		const userId = req.user._id;
+
+		if (!['accepted', 'declined'].includes(response)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Invalid response. Must be "accepted" or "declined"'
+			});
+		}
+
+		const group = await Group.findOne({
+			_id: groupId,
+			'members.user': userId,
+			'members.invitationStatus': 'pending'
+		});
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Invitation not found or already responded to'
+			});
+		}
+
+		// Update the invitation status
+		const memberIndex = group.members.findIndex(
+			(member) => member.user.toString() === userId.toString()
+		);
+
+		group.members[memberIndex].invitationStatus = response;
+
+		// If declined, remove from group
+		if (response === 'declined') {
+			group.members.splice(memberIndex, 1);
+		}
+
+		await group.save();
+
+		res.status(200).json({
+			success: true,
+			message: `Invitation ${response}`,
+			group
+		});
+	} catch (error) {
+		console.error('Error responding to invitation:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to respond to invitation',
+			error: error.message
+		});
+	}
+};
+
+// Update member role
+export const updateMemberRole = async (req, res) => {
+	try {
+		const { groupId, memberId, newRole } = req.body;
+		const userId = req.user._id;
+
+		// Validate role
+		if (!['co-lead', 'elder', 'member'].includes(newRole)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Invalid role. Must be "co-lead", "elder", or "member"'
+			});
+		}
+
+		const group = await Group.findById(groupId);
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Group not found'
+			});
+		}
+
+		// Check if user has permission to change roles
+		const currentUserMember = group.members.find(
+			(member) => member.user.toString() === userId.toString()
+		);
+
+		if (!currentUserMember) {
+			return res.status(403).json({
+				success: false,
+				message: 'You are not a member of this group'
+			});
+		}
+
+		if (currentUserMember.role !== 'admin' && currentUserMember.role !== 'co-lead') {
+			return res.status(403).json({
+				success: false,
+				message: 'You do not have permission to change roles'
+			});
+		}
+
+		// Find the member to update
+		const memberToUpdate = group.members.find((member) => member.user.toString() === memberId);
+
+		if (!memberToUpdate) {
+			return res.status(404).json({
+				success: false,
+				message: 'Member not found in group'
+			});
+		}
+
+		// Additional permission checks
+		if (memberToUpdate.role === 'admin') {
+			return res.status(403).json({
+				success: false,
+				message: 'Cannot change role of the admin'
+			});
+		}
+
+		if (currentUserMember.role === 'co-lead' && memberToUpdate.role === 'co-lead') {
+			return res.status(403).json({
+				success: false,
+				message: 'Co-leads cannot modify other co-leads'
+			});
+		}
+
+		// Update the role
+		memberToUpdate.role = newRole;
+		await group.save();
+
+		res.status(200).json({
+			success: true,
+			message: 'Member role updated successfully',
+			group
+		});
+	} catch (error) {
+		console.error('Error updating member role:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to update member role',
+			error: error.message
+		});
+	}
+};
+
+// Remove member from group
+export const removeMember = async (req, res) => {
+	try {
+		const { groupId, memberId } = req.body;
+		const userId = req.user._id;
+
+		const group = await Group.findById(groupId);
+
+		if (!group) {
+			return res.status(404).json({
+				success: false,
+				message: 'Group not found'
+			});
+		}
+
+		// Check if user has permission to remove members
+		const currentUserMember = group.members.find(
+			(member) => member.user.toString() === userId.toString()
+		);
+
+		if (!currentUserMember) {
+			return res.status(403).json({
+				success: false,
+				message: 'You are not a member of this group'
+			});
+		}
+
+		// Find the member to remove
+		const memberToRemove = group.members.find((member) => member.user.toString() === memberId);
+
+		if (!memberToRemove) {
+			return res.status(404).json({
+				success: false,
+				message: 'Member not found in group'
+			});
+		}
+
+		// Permission checks
+		if (memberToRemove.role === 'admin') {
+			return res.status(403).json({
+				success: false,
+				message: 'Cannot remove the admin from the group'
+			});
+		}
+
+		if (currentUserMember.role === 'member') {
+			return res.status(403).json({
+				success: false,
+				message: 'Regular members cannot remove other members'
+			});
+		}
+
+		if (
+			currentUserMember.role === 'elder' &&
+			(memberToRemove.role === 'elder' || memberToRemove.role === 'co-lead')
+		) {
+			return res.status(403).json({
+				success: false,
+				message: 'Elders can only remove regular members'
+			});
+		}
+
+		if (currentUserMember.role === 'co-lead' && memberToRemove.role === 'co-lead') {
+			return res.status(403).json({
+				success: false,
+				message: 'Co-leads cannot remove other co-leads'
+			});
+		}
+
+		// Remove the member
+		group.members = group.members.filter((member) => member.user.toString() !== memberId);
+
+		await group.save();
+
+		res.status(200).json({
+			success: true,
+			message: 'Member removed successfully',
+			group
+		});
+	} catch (error) {
+		console.error('Error removing member:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Failed to remove member',
+			error: error.message
+		});
+	}
+};

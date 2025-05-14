@@ -2,24 +2,11 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Header from '$lib/components/Header.svelte';
+	import { getPendingInvitations, respondToInvitation, getUserGroups } from '$lib/api';
+	import type { User, GroupInvitation, Group } from '$lib/types';
+	import { fade } from 'svelte/transition';
 
-	// Define user interface
-	interface User {
-		_id: string;
-		username: string;
-		email: string;
-		profileImage?: string;
-		createdAt?: string;
-	}
-
-	// Define group invite interface
-	interface GroupInvite {
-		id: string;
-		groupName: string;
-		invitedBy: string;
-		invitedAt: string;
-	}
-
+	// Define user
 	let user: User | null = null;
 	let loading = true;
 	let error: string | null = null;
@@ -27,21 +14,14 @@
 	let updateSuccess = false;
 	let updateError: string | null = null;
 
-	// Mock group invites data
-	const groupInvites: GroupInvite[] = [
-		{
-			id: 'invite1',
-			groupName: 'Project Alpha',
-			invitedBy: 'Jane Smith',
-			invitedAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-		},
-		{
-			id: 'invite2',
-			groupName: 'Marketing Team',
-			invitedBy: 'John Doe',
-			invitedAt: new Date(Date.now() - 172800000).toISOString() // 2 days ago
-		}
-	];
+	// Group state
+	let pendingInvitations: GroupInvitation[] = [];
+	let userGroups: Group[] = [];
+	let loadingGroups = true;
+	let groupError: string | null = null;
+	let showCreateGroupModal = false;
+	let notificationMessage: string | null = null;
+	let notificationType: 'success' | 'error' = 'success';
 
 	onMount(async () => {
 		try {
@@ -59,12 +39,34 @@
 
 			user = await response.json();
 			loading = false;
+
+			// Load group data
+			await loadGroupData();
 		} catch (err) {
 			console.error('Error loading profile:', err);
 			error = err instanceof Error ? err.message : 'Failed to load profile';
 			loading = false;
 		}
 	});
+
+	async function loadGroupData() {
+		try {
+			loadingGroups = true;
+			groupError = null;
+
+			// Load pending invitations
+			pendingInvitations = await getPendingInvitations();
+
+			// Load user groups
+			userGroups = await getUserGroups();
+
+			loadingGroups = false;
+		} catch (err) {
+			console.error('Error loading group data:', err);
+			groupError = err instanceof Error ? err.message : 'Failed to load group data';
+			loadingGroups = false;
+		}
+	}
 
 	async function updateProfileImage() {
 		if (!newImageUrl.trim()) {
@@ -89,7 +91,9 @@
 			}
 
 			// Update the displayed image on success
-			user.profileImage = newImageUrl;
+			if (user) {
+				user.profileImage = newImageUrl;
+			}
 			newImageUrl = '';
 			updateSuccess = true;
 		} catch (err) {
@@ -98,16 +102,32 @@
 		}
 	}
 
-	function acceptInvite(inviteId: string) {
-		// This would be implemented with a real API call
-		console.log(`Accepting invite ${inviteId}`);
-		alert(`Invite accepted! (This is a mock response)`);
-	}
+	async function handleInviteResponse(inviteId: string, response: 'accepted' | 'declined') {
+		try {
+			await respondToInvitation(inviteId, response);
 
-	function declineInvite(inviteId: string) {
-		// This would be implemented with a real API call
-		console.log(`Declining invite ${inviteId}`);
-		alert(`Invite declined! (This is a mock response)`);
+			// Show notification
+			notificationMessage =
+				response === 'accepted' ? 'You have joined the group!' : 'Invitation declined';
+			notificationType = 'success';
+
+			// Refresh data
+			await loadGroupData();
+
+			// Auto-hide notification after 3 seconds
+			setTimeout(() => {
+				notificationMessage = null;
+			}, 3000);
+		} catch (err) {
+			console.error(`Error ${response} invite:`, err);
+			notificationMessage = `Failed to ${response} invitation`;
+			notificationType = 'error';
+
+			// Auto-hide notification after 3 seconds
+			setTimeout(() => {
+				notificationMessage = null;
+			}, 3000);
+		}
 	}
 </script>
 
@@ -116,6 +136,16 @@
 </svelte:head>
 
 <div class="min-h-screen bg-white">
+	{#if notificationMessage}
+		<div
+			class="fixed top-4 right-4 z-50 rounded-lg p-4 shadow-lg {notificationType === 'success'
+				? 'bg-green-100 text-green-800'
+				: 'bg-red-100 text-red-800'}"
+			transition:fade
+		>
+			{notificationMessage}
+		</div>
+	{/if}
 
 	<div class="container mx-auto max-w-4xl p-6">
 		{#if loading}
@@ -194,31 +224,101 @@
 				{/if}
 			</div>
 
+			<!-- Group Management Section -->
+			<div class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+				<div class="mb-4 flex items-center justify-between border-b border-gray-200 pb-2">
+					<h3 class="text-lg font-semibold">My Groups</h3>
+					<button
+						on:click={() => goto('/group/create')}
+						class="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800"
+					>
+						Create Group
+					</button>
+				</div>
+
+				{#if loadingGroups}
+					<div class="py-4 text-center text-gray-600">
+						<div class="animate-pulse">Loading groups...</div>
+					</div>
+				{:else if groupError}
+					<div class="rounded bg-red-50 p-3 text-red-800">
+						{groupError}
+					</div>
+				{:else if userGroups.length === 0}
+					<p class="py-4 text-center text-gray-600">You are not a member of any groups yet.</p>
+				{:else}
+					<ul class="divide-y divide-gray-200">
+						{#each userGroups as group}
+							<li class="flex flex-col justify-between gap-4 py-4 sm:flex-row">
+								<div class="flex items-center gap-3">
+									{#if group.imageUrl && group.imageUrl.length > 2}
+										<img
+											src={group.imageUrl}
+											alt={group.name}
+											class="h-10 w-10 rounded-full border border-gray-200 object-cover"
+										/>
+									{:else}
+										<div
+											class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700"
+										>
+											{group.name.charAt(0).toUpperCase()}
+										</div>
+									{/if}
+									<div>
+										<h4 class="font-medium">{group.name}</h4>
+										<p class="text-sm text-gray-600">
+											{group.members.length} member{group.members.length !== 1 ? 's' : ''}
+										</p>
+									</div>
+								</div>
+								<div class="self-center">
+									<button
+										on:click={() => goto(`/group/${group._id}`)}
+										class="rounded bg-gray-100 px-3 py-1 text-sm hover:bg-gray-200"
+									>
+										View Group
+									</button>
+								</div>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+
+			<!-- Group Invitations Section -->
 			<div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
 				<h3 class="mb-4 border-b border-gray-200 pb-2 text-lg font-semibold">Group Invitations</h3>
 
-				{#if groupInvites.length === 0}
+				{#if loadingGroups}
+					<div class="py-4 text-center text-gray-600">
+						<div class="animate-pulse">Loading invitations...</div>
+					</div>
+				{:else if pendingInvitations.length === 0}
 					<p class="text-gray-600">No pending invitations</p>
 				{:else}
 					<ul class="divide-y divide-gray-200">
-						{#each groupInvites as invite}
+						{#each pendingInvitations as invite}
 							<li class="flex flex-col justify-between gap-4 py-4 sm:flex-row">
 								<div>
-									<h4 class="font-medium">{invite.groupName}</h4>
-									<p class="text-sm text-gray-600">Invited by: {invite.invitedBy}</p>
+									<h4 class="font-medium">{invite.name}</h4>
+									<p class="text-sm text-gray-600">
+										Invited by: {typeof invite.createdBy === 'string'
+											? invite.createdBy
+											: invite.createdBy.username}
+									</p>
 									<p class="text-sm text-gray-500">
-										Invited: {new Date(invite.invitedAt).toLocaleDateString()}
+										Invited: {new Date(invite.createdAt).toLocaleDateString()}
 									</p>
 								</div>
 								<div class="flex gap-2 sm:self-center">
 									<button
-										on:click={() => acceptInvite(invite.id)}
+										on:click={() => handleInviteResponse(invite._id, 'accepted')}
 										class="rounded bg-black px-3 py-1 text-sm text-white hover:bg-gray-800"
 									>
 										Accept
 									</button>
 									<button
-										on:click={() => declineInvite(invite.id)}
+										on:click={() => handleInviteResponse(invite._id, 'declined')}
 										class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
 									>
 										Decline
