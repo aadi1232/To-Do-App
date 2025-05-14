@@ -23,7 +23,6 @@
 	let user: User | null = null;
 	let loading = true;
 	let error: string | null = null;
-	let profileImage = '';
 	let newImageUrl = '';
 	let updateSuccess = false;
 	let updateError: string | null = null;
@@ -58,11 +57,7 @@
 				throw new Error('Failed to fetch profile data');
 			}
 
-			const userData = await response.json();
-			user = userData;
-			profileImage =
-				userData.profileImage ||
-				'https://ui-avatars.com/api/?name=' + encodeURIComponent(userData.username);
+			user = await response.json();
 			loading = false;
 		} catch (err) {
 			console.error('Error loading profile:', err);
@@ -94,10 +89,7 @@
 			}
 
 			// Update the displayed image on success
-			profileImage = newImageUrl;
-			if (user) {
-				user.profileImage = newImageUrl;
-			}
+			user.profileImage = newImageUrl;
 			newImageUrl = '';
 			updateSuccess = true;
 		} catch (err) {
@@ -147,11 +139,19 @@
 			<div class="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
 				<div class="flex flex-col items-center gap-6 md:flex-row md:items-start">
 					<div class="relative h-32 w-32">
-						<img
-							src={profileImage}
-							alt="{user.username}'s profile"
-							class="h-32 w-32 rounded-full border-2 border-gray-200 object-cover"
-						/>
+						{#if user.profileImage && user.profileImage.length > 2}
+							<img
+								src={user.profileImage}
+								alt="{user.username}'s profile"
+								class="h-32 w-32 rounded-full border-2 border-gray-200 object-cover"
+							/>
+						{:else}
+							<div
+								class="flex h-32 w-32 items-center justify-center rounded-full border-2 border-gray-200 bg-gray-100 text-2xl font-semibold text-gray-700"
+							>
+								{user.username.charAt(0).toUpperCase()}
+							</div>
+						{/if}
 					</div>
 					<div>
 						<h2 class="text-xl font-semibold">{user.username}</h2>
