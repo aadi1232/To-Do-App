@@ -1,21 +1,37 @@
 import { json } from '@sveltejs/kit';
+import { handleRequest } from '$backend/server.js';
 
-/** @type {Array<{ id: number, text: string, completed: boolean }>} */
-let todos = ["create the group","Update the profile image"]; // This is temporary storage. In a real app, you'd use a database
+export async function GET({ cookies }) {
+    const token = cookies.get('jwt');
+    if (!token) return json({ message: 'Not authorized' }, { status: 401 });
 
-export async function GET() {
-	try {
-		return json({
-			status: 200,
-			todos: todos
-		});
-	} catch (error) {
-		return json(
-			{
-				status: 500,
-				error: 'Failed to fetch todos'
-			},
-			{ status: 500 }
-		);
-	}
+    const result = await handleRequest(
+        'GET',
+        '/api/todos',
+        null,
+        { Authorization: `Bearer ${token}` },
+        { jwt: token }
+    );
+
+    return json(result.body, { status: result.status });
+}
+
+export async function POST({ request, cookies }) {
+    const token = cookies.get('jwt');
+    if (!token) return json({ message: 'Not authorized' }, { status: 401 });
+
+    const data = await request.json();
+
+    const result = await handleRequest(
+        'POST',
+        '/api/todos',
+        data,
+        {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        },
+        { jwt: token }
+    );
+
+    return json(result.body, { status: result.status });
 }
