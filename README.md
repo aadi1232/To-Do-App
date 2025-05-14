@@ -1,33 +1,61 @@
-# sv
+# To-Do App with SvelteKit and Express
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A modern to-do application with personal and group task management, semantic search, and AI-powered task suggestions.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Personal and group to-do management
+- Real-time updates
+- Semantic search powered by Typesense (with fallback)
+- User authentication and authorization
+- Group creation and member management
+- AI-powered task suggestions
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies:
 
 ```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+npm install
 ```
 
-## Developing
+3. Set up environment variables in `.env` file:
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+```
+JWT_SECRET=your_secret_key
+MONGODB_URI=mongodb://localhost:27017/todo-app
+TYPESENSE_HOST=localhost
+TYPESENSE_PORT=8108
+TYPESENSE_PROTOCOL=http
+TYPESENSE_API_KEY=xyz
+OPENAI_API_KEY=your_openai_api_key_for_ai_features
+```
+
+4. Start the development server:
 
 ```bash
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## Search Functionality
 
-To create a production version of your app:
+The app uses Typesense for powerful semantic search capabilities. However, the app will still work even if Typesense is not installed or available on your system.
+
+### Using with Typesense (recommended for full features)
+
+To use the full search capabilities, run Typesense alongside the app:
+
+```bash
+# Using Docker
+docker run -p 8108:8108 -v /tmp/typesense-data:/data typesense/typesense:0.25.1 --data-dir /data --api-key=xyz --enable-cors
+```
+
+### Without Typesense
+
+If Typesense is not available, the app will automatically use a built-in fallback search implementation that performs basic text matching. You can still search your todos, but the results may not be as rich as with the semantic search.
+
+## Building for Production
 
 ```bash
 npm run build
@@ -35,4 +63,11 @@ npm run build
 
 You can preview the production build with `npm run preview`.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Technologies Used
+
+- SvelteKit (frontend)
+- Express.js (backend)
+- MongoDB (database)
+- Typesense (search)
+- TailwindCSS (styling)
+- Socket.io (real-time updates)
