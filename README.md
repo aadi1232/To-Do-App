@@ -47,8 +47,14 @@ The app uses Typesense for powerful semantic search capabilities. However, the a
 To use the full search capabilities, run Typesense alongside the app:
 
 ```bash
-# Using Docker
-docker run -p 8108:8108 -v /tmp/typesense-data:/data typesense/typesense:0.25.1 --data-dir /data --api-key=xyz --enable-cors
+# Using Docker directly
+docker run -p 8108:8108 -v ./typesense-data:/data typesense/typesense:0.25.1 --data-dir /data --api-key=xyz --enable-cors
+
+# Or using Docker Compose (recommended)
+docker-compose up -d typesense
+
+# Or use the convenience script to start all services
+./start-services.sh
 ```
 
 ### Without Typesense
