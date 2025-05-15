@@ -8,10 +8,13 @@ export interface User {
 }
 
 export interface GroupMember {
+	_id?: string;
 	user: User | string;
 	role: 'admin' | 'co-lead' | 'elder' | 'member';
 	invitationStatus: 'pending' | 'accepted' | 'declined';
 	addedBy?: User | string;
+	createdAt?: string;
+	updatedAt?: string;
 }
 
 export interface Group {
@@ -26,7 +29,13 @@ export interface Group {
 
 // Since we're using the Group object for pending invitations too,
 // we'll create a type alias for clarity
-export type GroupInvitation = Group;
+export interface GroupInvitation {
+	_id: string;
+	group: Group;
+	invitedBy: User;
+	status: 'pending' | 'accepted' | 'declined';
+	createdAt: string;
+}
 
 export interface Todo {
 	_id: string;
@@ -36,6 +45,7 @@ export interface Todo {
 	dueDate?: string;
 	priority?: 'low' | 'medium' | 'high';
 	group?: Group | string;
+	user?: User | string;
 	createdBy: User | string;
 	createdAt?: string;
 	updatedAt?: string;
@@ -43,10 +53,17 @@ export interface Todo {
 	isHighlighted?: boolean;
 }
 
+export interface CreateTodoData {
+	title: string;
+	completed?: boolean;
+	textColor?: string;
+	isHighlighted?: boolean;
+}
+
 export interface CreateGroupData {
 	name: string;
 	imageUrl?: string;
-	invitees?: { email: string }[];
+	invitees?: { email: string }[] | string[];
 }
 
 export interface UpdateGroupData {

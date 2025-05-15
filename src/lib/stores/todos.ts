@@ -1,6 +1,5 @@
 import { writable } from 'svelte/store';
-import type { Todo } from '../types';
-import type { CreateTodoData } from '../types/index';
+import type { Todo, CreateTodoData } from '../types';
 import { 
   getUserTodos, 
   createTodo as apiCreateTodo, 
