@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { addOnlineUser, removeOnlineUser, updateOnlineUsers } from './onlineUsers';
 
 // Define notification type
 /**
@@ -86,6 +87,9 @@ export function initializeSocket(userId, groupIds = []) {
 			console.log('Joining group rooms:', groupIds);
 			socket.emit('join:groups', { groupIds });
 		}
+
+		// Add ourselves to online users
+		addOnlineUser(userId);
 	});
 
 	socket.on('disconnect', () => {
@@ -114,6 +118,9 @@ export function initializeSocket(userId, groupIds = []) {
 
 	// Handle notification events
 	setupNotificationListeners();
+
+	// Handle online users updates
+	setupOnlineUsersListeners();
 }
 
 /**
@@ -425,4 +432,35 @@ export function sendDirectGroupInvitation(targetUserId, groupId, groupName, invi
 	});
 
 	return true;
+}
+
+/**
+ * Set up listeners for online user events
+ */
+function setupOnlineUsersListeners() {
+	if (!socket) return;
+
+	// Listen for online users updates
+	socket.on('online:users', (data) => {
+		console.log('Received online users update:', data);
+		if (data && Array.isArray(data.userIds)) {
+			updateOnlineUsers(data.userIds);
+		}
+	});
+
+	// Listen for user connect events
+	socket.on('user:connected', (data) => {
+		console.log('User connected:', data);
+		if (data && data.userId) {
+			addOnlineUser(data.userId);
+		}
+	});
+
+	// Listen for user disconnect events
+	socket.on('user:disconnected', (data) => {
+		console.log('User disconnected:', data);
+		if (data && data.userId) {
+			removeOnlineUser(data.userId);
+		}
+	});
 }

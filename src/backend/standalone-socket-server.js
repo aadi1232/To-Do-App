@@ -250,9 +250,17 @@ const io = new Server(httpServer, {
 	}
 });
 
-// Keep track of connected users
+// Store user connections - maps userId to socketId
+/** @type {Map<string, string>} */
 const connectedUsers = new Map();
+
+// Store user groups - maps userId to array of groupIds
+/** @type {Map<string, string[]>} */
 const userGroups = new Map();
+
+// Store group memberships - maps groupId to array of userIds
+/** @type {Map<string, Set<string>>} */
+const groupMembers = new Map();
 
 // Skip authentication for development
 io.use((socket, next) => {
@@ -281,6 +289,12 @@ io.on('connection', (socket) => {
 	socket.join(`user:${userId}`);
 	console.log(`[ROOM-JOIN] User ${userId} joined room user:${userId}`);
 
+	// Broadcast to other users that this user is online
+	socket.broadcast.emit('user:connected', {
+		userId,
+		timestamp: new Date().toISOString()
+	});
+
 	// Log all rooms for this socket
 	const rooms = Array.from(socket.rooms);
 	console.log(`[ROOMS] Socket ${socket.id} is in rooms: ${rooms.join(', ')}`);
@@ -308,7 +322,21 @@ io.on('connection', (socket) => {
 			for (const groupId of groupIds) {
 				socket.join(`group:${groupId}`);
 				console.log(`[GROUP-JOIN] User ${userId} joined room group:${groupId}`);
+
+				// Add this user to the group members map
+				if (!groupMembers.has(groupId)) {
+					groupMembers.set(groupId, new Set());
+				}
+				// Use non-null assertion since we just created it if it didn't exist
+				const groupMemberSet = groupMembers.get(groupId);
+				if (groupMemberSet) {
+					groupMemberSet.add(userId);
+				}
+
+				// After joining, broadcast online users in this group
+				broadcastOnlineUsers(groupId);
 			}
+
 			socket.emit('groups:joined', { groupIds });
 			console.log(`[GROUP-JOIN] Confirmed groups joined to user ${userId}`);
 
@@ -568,10 +596,37 @@ io.on('connection', (socket) => {
 	// Handle user disconnect
 	socket.on('disconnect', () => {
 		console.log(`[DISCONNECT] User disconnected: ${userId}, Socket ID: ${socket.id}`);
-		// Clean up
+
+		// Get the groups this user belonged to
+		const userGroupIds = userGroups.get(userId) || [];
+
+		// Remove user from connected users
 		connectedUsers.delete(userId);
+
+		// Remove user from user groups
 		userGroups.delete(userId);
+
 		console.log(`[DISCONNECT] Total connected users after disconnect: ${connectedUsers.size}`);
+
+		// Broadcast to other users that this user disconnected
+		socket.broadcast.emit('user:disconnected', {
+			userId,
+			timestamp: new Date().toISOString()
+		});
+
+		// Remove from group members and broadcast updated online users
+		for (const groupId of userGroupIds) {
+			if (groupMembers.has(groupId)) {
+				// Remove user from group members - use non-null assertion with a safe check
+				const groupMemberSet = groupMembers.get(groupId);
+				if (groupMemberSet) {
+					groupMemberSet.delete(userId);
+				}
+
+				// Broadcast updated online users for this group
+				broadcastOnlineUsers(groupId);
+			}
+		}
 	});
 });
 
@@ -588,3 +643,35 @@ setInterval(() => {
 	console.log(`Socket.IO server still running (${io.engine.clientsCount} connected clients)`);
 	console.log(`Connected users: ${Array.from(connectedUsers.keys()).join(', ') || 'none'}`);
 }, 30000);
+
+/**
+ * Broadcast online users in a group to all group members
+ * @param {string} groupId - The ID of the group
+ */
+function broadcastOnlineUsers(groupId) {
+	try {
+		if (!groupId || !groupMembers.has(groupId)) {
+			console.log(`[ONLINE-USERS] No members found for group ${groupId}`);
+			return;
+		}
+
+		// Get all userIds in this group
+		const allMemberIds = Array.from(groupMembers.get(groupId) || []);
+
+		// Filter to just the online members
+		const onlineUserIds = allMemberIds.filter((userId) => connectedUsers.has(userId));
+
+		console.log(
+			`[ONLINE-USERS] Broadcasting ${onlineUserIds.length} online users for group ${groupId}`
+		);
+
+		// Emit to the group room
+		io.to(`group:${groupId}`).emit('online:users', {
+			groupId,
+			userIds: onlineUserIds,
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		console.error(`[ONLINE-USERS] Error broadcasting online users for group ${groupId}:`, error);
+	}
+}

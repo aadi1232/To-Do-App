@@ -15,6 +15,7 @@
 	import { getSuggestions } from '$lib/utils/ai/suggestTask.js';
 	import GroupTodoSearch from '$lib/components/GroupTodoSearch.svelte';
 	import { connected, initializeSocket, joinGroup } from '$lib/stores/socket.js';
+	import { onlineUsers } from '$lib/stores/onlineUsers';
 	import { get } from 'svelte/store';
 
 	const groupId = $page.params.id;
@@ -57,6 +58,12 @@
 	let lastRefreshTime = Date.now();
 	let pendingRefresh = false;
 	let syncInterval: number | null = null; // For background sync
+
+	// Subscribe to the onlineUsers store
+	let onlineUsersList: Set<string> = new Set();
+	const unsubscribe = onlineUsers.subscribe((value) => {
+		onlineUsersList = value;
+	});
 
 	onMount(async () => {
 		try {
@@ -129,6 +136,9 @@
 			clearInterval(syncInterval);
 			syncInterval = null;
 		}
+
+		// Unsubscribe from the onlineUsers store
+		unsubscribe();
 	});
 
 	// Set up event listeners for real-time updates
@@ -682,6 +692,12 @@
 
 		console.log('Started background sync for todos');
 	}
+
+	// Add this function to check if a user is online
+	function isUserOnline(userId: string): boolean {
+		if (!userId) return false;
+		return onlineUsersList.has(userId);
+	}
 </script>
 
 <svelte:head>
@@ -1013,7 +1029,7 @@
 									class="flex items-center justify-between rounded border border-gray-200 bg-white p-4 shadow-sm"
 								>
 									<div class="flex items-center">
-										<div class="mr-3 h-10 w-10 overflow-hidden rounded-full bg-gray-200">
+										<div class="relative mr-3 h-10 w-10 overflow-hidden rounded-full bg-gray-200">
 											{#if typeof member.user !== 'string' && member.user.profileImage}
 												<img
 													src={member.user.profileImage}
@@ -1027,9 +1043,22 @@
 													{getMemberName(member).charAt(0).toUpperCase()}
 												</div>
 											{/if}
+
+											<!-- Online status indicator -->
+											{#if isUserOnline(typeof member.user === 'string' ? member.user : member.user._id)}
+												<span
+													class="absolute right-0 bottom-0 h-3 w-3 rounded-full border border-white bg-green-500"
+													title="Online"
+												></span>
+											{/if}
 										</div>
 										<div>
-											<p class="font-medium">{getMemberName(member)}</p>
+											<p class="flex items-center font-medium">
+												{getMemberName(member)}
+												{#if isUserOnline(typeof member.user === 'string' ? member.user : member.user._id)}
+													<span class="ml-2 text-xs font-normal text-green-600">Online</span>
+												{/if}
+											</p>
 											<p class="text-xs text-gray-500">
 												{getMemberEmail(member)}
 											</p>
