@@ -129,4 +129,6 @@ export async function deleteGroupTodo(todoId: string): Promise<void> {
 		const error = await response.json();
 		throw new Error(error.message || 'Failed to delete group todo');
 	}
+
+	return;
 }

@@ -600,12 +600,15 @@ export const updateGroup = async (req, res) => {
 	}
 };
 
-// Delete group with name confirmation
+// Delete group without name confirmation
 export const deleteGroup = async (req, res) => {
 	try {
 		const { id: groupId } = req.params;
 		const userId = req.user._id;
-		const { confirmationName } = req.body;
+
+		console.log('Delete group request received:');
+		console.log('- Group ID:', groupId);
+		console.log('- User ID:', userId);
 
 		// Find the group
 		const group = await Group.findById(groupId);
@@ -633,14 +636,6 @@ export const deleteGroup = async (req, res) => {
 			return res.status(403).json({
 				success: false,
 				message: 'Only the group admin can delete the group'
-			});
-		}
-
-		// Check if confirmation name matches
-		if (confirmationName !== group.name) {
-			return res.status(400).json({
-				success: false,
-				message: 'Group name confirmation does not match'
 			});
 		}
 

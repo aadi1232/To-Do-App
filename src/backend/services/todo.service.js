@@ -10,7 +10,7 @@ export async function createTodo(userId, data) {
 	};
 
 	const todo = await Todo.create(todoData);
-	
+
 	// Index the todo in Typesense
 	try {
 		await typesenseService.indexTodo(todo);
@@ -28,40 +28,40 @@ export async function getTodosByUser(userId) {
 
 export async function updateTodo(userId, todoId, data) {
 	const todo = await Todo.findOne({ _id: todoId, user: userId });
-	
+
 	if (!todo) {
 		throw new Error('Todo not found');
 	}
-	
+
 	Object.assign(todo, data);
 	const updatedTodo = await todo.save();
-	
+
 	// Update the todo in Typesense
 	try {
 		await typesenseService.indexTodo(updatedTodo);
 	} catch (error) {
 		console.error('Failed to update todo in Typesense:', error);
 	}
-	
+
 	return updatedTodo;
 }
 
 export async function deleteTodo(userId, todoId) {
 	const todo = await Todo.findOne({ _id: todoId, user: userId });
-	
+
 	if (!todo) {
 		throw new Error('Todo not found');
 	}
-	
-	await todo.remove();
-	
+
+	await Todo.deleteOne({ _id: todoId });
+
 	// Delete the todo from Typesense
 	try {
 		await typesenseService.deleteTodoFromIndex(todoId);
 	} catch (error) {
 		console.error('Failed to delete todo from Typesense:', error);
 	}
-	
+
 	return { message: 'Todo deleted successfully' };
 }
 
@@ -176,9 +176,29 @@ export async function deleteGroupTodo(userId, todoId) {
 	const userMember = group.members.find((member) => member.user.toString() === userId.toString());
 
 	// Check permissions based on role
-	if (userMember.role === 'member') {
+	if (userMember && userMember.role === 'member') {
 		throw new Error('You do not have permission to delete todos in this group');
 	}
 
-	return await todo.remove();
+	// Store todo information for return value
+	const todoData = {
+		_id: todo._id,
+		title: todo.title,
+		completed: todo.completed,
+		group: todo.group
+	};
+
+	// Delete the todo
+	await Todo.deleteOne({ _id: todoId });
+
+	// Delete from Typesense if applicable
+	try {
+		await typesenseService.deleteGroupTodoFromIndex(todoId);
+	} catch (error) {
+		console.error('Failed to delete todo from Typesense:', error);
+		// We don't throw here to avoid disrupting the main flow
+	}
+
+	// Return the todo data for notification purposes
+	return todoData;
 }

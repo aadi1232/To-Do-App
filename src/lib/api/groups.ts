@@ -222,20 +222,15 @@ export async function updateGroup(groupId: string, groupData: UpdateGroupData): 
 /**
  * Delete a group
  * @param groupId - ID of the group
- * @param confirmationName - Group name to confirm deletion
  * @returns Success message
  */
-export async function deleteGroup(
-	groupId: string,
-	confirmationName: string
-): Promise<{ success: boolean; message: string }> {
+export async function deleteGroup(groupId: string): Promise<{ success: boolean; message: string }> {
 	const response = await fetch(`/api/groups/${groupId}`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		credentials: 'include',
-		body: JSON.stringify({ confirmationName })
+		credentials: 'include'
 	});
 
 	if (!response.ok) {
