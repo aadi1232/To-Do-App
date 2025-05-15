@@ -1,16 +1,17 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
-  import { todos } from '../stores/todos.js';
+  import { todos } from '../stores/todos';
   import TodoItem from './TodoItem.svelte';
+  import type { Todo } from '../types';
   
   let loading = true;
-  let error = null;
+  let error: string | null = null;
   
   onMount(async () => {
     try {
       await todos.fetchTodos();
     } catch (err) {
-      error = err.message || 'Failed to load todos';
+      error = err instanceof Error ? err.message : 'Failed to load todos';
     } finally {
       loading = false;
     }

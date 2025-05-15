@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { todos } from '../stores/todos.js';
+  import { todos } from '../stores/todos';
   
   let searchQuery = '';
   let searchResults = [];

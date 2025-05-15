@@ -18,6 +18,21 @@ export async function getTodos(req, res) {
 	}
 }
 
+export async function getTodoById(req, res) {
+	try {
+		const { todoId } = req.params;
+		const todo = await todoService.getTodoById(req.user._id, todoId);
+		
+		if (!todo) {
+			return res.status(404).json({ message: 'Todo not found' });
+		}
+		
+		res.json(todo);
+	} catch (err) {
+		res.status(400).json({ message: err.message });
+	}
+}
+
 export async function updateTodo(req, res) {
 	try {
 		const { todoId } = req.params;

@@ -46,6 +46,46 @@ export async function createTodo(todoData: CreateTodoData): Promise<Todo> {
 }
 
 /**
+ * Update a personal todo
+ * @param todoId ID of the todo
+ * @param todoData Todo data to update
+ * @returns Updated todo object
+ */
+export async function updateTodo(todoId: string, todoData: Partial<CreateTodoData>): Promise<Todo> {
+	const response = await fetch(`/api/todos/${todoId}`, {
+		method: 'PUT',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		credentials: 'include',
+		body: JSON.stringify(todoData)
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Failed to update todo');
+	}
+
+	return response.json();
+}
+
+/**
+ * Delete a personal todo
+ * @param todoId ID of the todo
+ */
+export async function deleteTodo(todoId: string): Promise<void> {
+	const response = await fetch(`/api/todos/${todoId}`, {
+		method: 'DELETE',
+		credentials: 'include'
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		throw new Error(error.message || 'Failed to delete todo');
+	}
+}
+
+/**
  * Get all todos for a specific group
  * @param groupId ID of the group
  * @returns Array of todo objects
