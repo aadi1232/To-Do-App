@@ -163,6 +163,32 @@ function createTodosStore() {
         
         return false;
       }
+    },
+    
+    /**
+     * Moves a todo to the top of the list
+     * @param {string} id - The todo ID
+     * @returns {Promise<Todo|null>}
+     */
+    moveTodoToTop: async (id: string) => {
+      try {
+        let todoToMove: Todo | undefined;
+        
+        // Find the todo in the current list
+        update(todos => {
+          todoToMove = todos.find(t => t._id === id);
+          if (!todoToMove) return todos;
+          
+          // Remove the todo from its current position and add it to the top
+          const filteredTodos = todos.filter(t => t._id !== id);
+          return [todoToMove, ...filteredTodos];
+        });
+
+        return todoToMove || null;
+      } catch (error) {
+        console.error('Error moving todo to top:', error);
+        return null;
+      }
     }
   };
 }

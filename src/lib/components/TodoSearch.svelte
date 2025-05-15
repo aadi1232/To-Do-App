@@ -1,12 +1,18 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { todos } from '../stores/todos';
+  import type { Todo } from '../types';
   
   let searchQuery = '';
-  let searchResults = [];
+  let searchResults: Array<{
+    _id: string;
+    title: string;
+    completed: boolean;
+    highlights?: string[];
+  }> = [];
   let loading = false;
-  let searchTimeout;
+  let searchTimeout: number | null = null;
   let initialized = false;
   let usingFallback = false; // Track if we're using fallback search
   
@@ -46,7 +52,7 @@
     }
     
     // Set a debounce of 300ms to avoid excessive API calls
-    searchTimeout = setTimeout(async () => {
+    searchTimeout = window.setTimeout(async () => {
       loading = true;
       
       try {
@@ -69,12 +75,12 @@
           usingFallback = data.fallback === true;
           
           if (data.hits && Array.isArray(data.hits)) {
-            searchResults = data.hits.map(hit => ({
+            searchResults = data.hits.map((hit: any) => ({
               _id: hit.document.id,
               title: hit.document.title,
               completed: hit.document.completed,
               // Format any highlighted content
-              highlights: hit.highlights ? hit.highlights.map(h => h.snippet) : []
+              highlights: hit.highlights ? hit.highlights.map((h: any) => h.snippet) : []
             }));
           } else {
             console.warn("Unexpected search results format:", data);
@@ -106,8 +112,14 @@
   }
   
   // Toggle todo completion
-  function toggleTodo(id) {
+  function toggleTodo(id: string) {
     todos.toggleTodo(id);
+  }
+
+  // Move todo to top when clicked
+  async function handleTodoClick(id: string) {
+    await todos.moveTodoToTop(id);
+    clearSearch(); // Clear search after moving todo
   }
 </script>
 
@@ -165,7 +177,10 @@
                 class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 aria-label={`Toggle completion of todo: ${result.title}`}
               />
-              <div class="ml-3">
+              <div 
+                class="ml-3 flex-grow cursor-pointer hover:bg-gray-50 rounded px-2 py-1"
+                on:click={() => handleTodoClick(result._id)}
+              >
                 {#if result.highlights && result.highlights.length > 0}
                   <!-- Display highlighted text -->
                   <p class="text-sm">
