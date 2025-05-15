@@ -26,6 +26,16 @@ export async function getTodosByUser(userId) {
 	return await Todo.find({ user: userId, group: null }).sort({ createdAt: -1 });
 }
 
+export async function getTodoById(userId, todoId) {
+	const todo = await Todo.findOne({ 
+		_id: todoId, 
+		user: userId,
+		group: null
+	});
+	
+	return todo;
+}
+
 export async function updateTodo(userId, todoId, data) {
 	const todo = await Todo.findOne({ _id: todoId, user: userId });
 	
@@ -53,7 +63,8 @@ export async function deleteTodo(userId, todoId) {
 		throw new Error('Todo not found');
 	}
 	
-	await todo.remove();
+	// Use deleteOne instead of remove
+	await Todo.deleteOne({ _id: todoId });
 	
 	// Delete the todo from Typesense
 	try {
@@ -180,5 +191,8 @@ export async function deleteGroupTodo(userId, todoId) {
 		throw new Error('You do not have permission to delete todos in this group');
 	}
 
-	return await todo.remove();
+	// Use deleteOne instead of remove
+	await Todo.deleteOne({ _id: todoId });
+	
+	return { message: 'Todo deleted successfully' };
 }

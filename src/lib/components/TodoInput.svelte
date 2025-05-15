@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { todos } from '../stores/todos.js';
+  import { todos } from '../stores/todos';
   import { getSuggestions } from '../utils/ai/suggestTask.js';
   import { onDestroy } from 'svelte';
   
