@@ -304,33 +304,58 @@
 				{:else}
 					<ul class="space-y-4">
 						{#each pendingInvitations as invite}
-							<li
-								class="mb-4 flex flex-col justify-between gap-4 rounded border border-gray-200 bg-white p-4 py-4 shadow-sm sm:flex-row"
-							>
-								<div>
-									<h4 class="text-lg font-medium">{invite.group?.name || 'Group Invitation'}</h4>
-									<p class="mt-1 text-sm text-gray-600">
-										Invited by: {invite.invitedBy?.username || 'Unknown'}
-									</p>
-									<p class="mt-1 text-xs text-gray-500">
-										Invited: {new Date(invite.createdAt).toLocaleDateString()}
-									</p>
-								</div>
-								<div class="flex gap-2 sm:self-center">
-									<button
-										on:click={() => handleInviteResponse(invite._id, 'accepted')}
-										class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-									>
-										Accept
-									</button>
-									<button
-										on:click={() => handleInviteResponse(invite._id, 'declined')}
-										class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
-									>
-										Decline
-									</button>
-								</div>
-							</li>
+							{#if invite}
+								<li
+									class="mb-4 flex flex-col justify-between gap-4 rounded border border-gray-200 bg-white p-4 py-4 shadow-sm sm:flex-row"
+								>
+									<div>
+										<h4 class="text-lg font-medium">{invite.name}</h4>
+										{#if invite.members && invite.members.length > 0}
+											{@const currentMember = invite.members.find((m) =>
+												typeof m.user === 'object'
+													? m.user._id === (user?._id || '')
+													: m.user === (user?._id || '')
+											)}
+											{@const inviter =
+												currentMember && currentMember.addedBy
+													? typeof currentMember.addedBy === 'object'
+														? currentMember.addedBy.username
+														: 'Unknown'
+													: typeof invite.createdBy === 'object'
+														? invite.createdBy.username
+														: 'Unknown'}
+											<p class="mt-1 text-sm text-gray-600">
+												Invited by: {inviter}
+											</p>
+										{:else}
+											<p class="mt-1 text-sm text-gray-600">
+												Invited by: {typeof invite.createdBy === 'object'
+													? invite.createdBy.username
+													: 'Unknown'}
+											</p>
+										{/if}
+										<p class="mt-1 text-xs text-gray-500">
+											Invited: {invite.createdAt
+												? new Date(invite.createdAt).toLocaleDateString()
+												: 'Recently'}
+										</p>
+									</div>
+									<div class="flex gap-2 sm:self-center">
+										<button
+											on:click={() => handleInviteResponse(invite._id, 'accepted')}
+											class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+										>
+											Accept
+										</button>
+										<button
+											on:click={() => handleInviteResponse(invite._id, 'declined')}
+											class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100"
+										>
+											Decline
+										</button>
+									</div>
+								</li>
+							{/if}
 						{/each}
 					</ul>
 				{/if}

@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-import { MONGO_URI } from '$lib/env.js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/todo-app';
 
 // Track connection state
 export const dbState = {
