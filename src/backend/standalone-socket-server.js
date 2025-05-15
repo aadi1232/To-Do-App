@@ -1,7 +1,21 @@
 /**
- * Simplified standalone Socket.IO server for To-Do-App
- * This standalone server just accepts connections and logs events
- * without requiring database connection
+ * STANDALONE SOCKET.IO SERVER FOR TO-DO-APP
+ * 
+ * IMPORTANT: This is a development/testing utility that runs separately from the main application.
+ * It's used for testing socket functionality without requiring the full application stack.
+ * 
+ * Usage:
+ * 1. Make this file executable: chmod +x src/backend/standalone-socket-server.js
+ * 2. Run it directly: node src/backend/standalone-socket-server.js
+ * 3. The server will listen on port 3001
+ * 
+ * This server provides:
+ * - Socket.IO connection testing
+ * - Real-time notification testing
+ * - Group invitation simulation
+ * - Todo update notifications
+ * 
+ * For production, the socket functionality is integrated into the main server.
  */
 
 import { createServer } from 'http';
