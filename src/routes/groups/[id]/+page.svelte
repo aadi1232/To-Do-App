@@ -305,15 +305,10 @@
 	}
 
 	async function handleDeleteGroup() {
-		if (confirmationName !== group?.name) {
-			showNotification('Group name confirmation does not match', 'error');
-			return;
-		}
-
 		deleteLoading = true;
 
 		try {
-			const result = await deleteGroup(groupId, confirmationName);
+			const result = await deleteGroup(groupId);
 
 			if (result.success) {
 				showNotification('Group deleted successfully');
@@ -386,7 +381,7 @@
 			suggestionsVisible = false;
 			return;
 		}
-		
+
 		suggestionsLoading = true;
 		try {
 			suggestions = await getSuggestions(newTodoTitle);
@@ -399,7 +394,7 @@
 			suggestionsLoading = false;
 		}
 	}
-	
+
 	function handleTodoInput(): void {
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
@@ -408,10 +403,10 @@
 			fetchSuggestions();
 		}, 500); // 500ms debounce
 	}
-	
+
 	function handleTodoKeydown(event: KeyboardEvent): void {
 		if (!suggestionsVisible) return;
-		
+
 		switch (event.key) {
 			case 'ArrowDown':
 				event.preventDefault();
@@ -434,12 +429,12 @@
 				break;
 		}
 	}
-	
+
 	function selectSuggestion(suggestion: string): void {
 		newTodoTitle = suggestion;
 		suggestionsVisible = false;
 	}
-	
+
 	// Cleanup on component destroy
 	onDestroy(() => {
 		if (debounceTimeout) {
@@ -603,13 +598,13 @@
 						{/if}
 
 						<!-- Add the search component -->
-						<GroupTodoSearch 
-							{groupId} 
-							onToggleTodo={handleToggleTodo} 
-							onDeleteTodo={handleDeleteTodo} 
+						<GroupTodoSearch
+							{groupId}
+							onToggleTodo={handleToggleTodo}
+							onDeleteTodo={handleDeleteTodo}
 							canEdit={canAddTodos()}
 						/>
-						
+
 						{#if canAddTodos()}
 							<form class="mb-6" on:submit|preventDefault={handleAddTodo}>
 								<div class="flex">
@@ -646,18 +641,24 @@
 
 						{#if suggestionsVisible}
 							<div class="relative mt-1 mb-4">
-								<div class="absolute z-10 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+								<div
+									class="absolute z-10 w-full rounded-md border border-gray-200 bg-white shadow-lg"
+								>
 									<div class="py-1">
 										{#if suggestionsLoading}
 											<div class="flex flex-col items-center py-3">
-												<div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500 mb-2"></div>
+												<div
+													class="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"
+												></div>
 												<p class="text-xs text-gray-500">AI is generating suggestions...</p>
 											</div>
 										{:else}
 											<p class="px-3 py-2 text-xs font-medium text-gray-500">AI suggestions:</p>
 											{#each suggestions as suggestion, i}
-												<div 
-													class="cursor-pointer px-3 py-2 hover:bg-gray-100 {i === selectedIndex ? 'bg-gray-100' : ''}"
+												<div
+													class="cursor-pointer px-3 py-2 hover:bg-gray-100 {i === selectedIndex
+														? 'bg-gray-100'
+														: ''}"
 													on:mousedown={() => selectSuggestion(suggestion)}
 													on:mouseover={() => (selectedIndex = i)}
 												>
@@ -911,62 +912,26 @@
 						<div class="rounded border border-red-200 bg-red-50 p-6">
 							<h3 class="mb-4 text-lg font-medium text-red-700">Danger Zone</h3>
 
-							{#if !showDeleteConfirmation}
-								<p class="mb-4 text-sm text-gray-600">
-									Deleting the group will permanently remove all group data, including todos and
-									member relationships. This action cannot be undone.
-								</p>
+							<p class="mb-4 text-sm text-gray-600">
+								Deleting the group will permanently remove all group data, including todos and
+								member relationships. This action cannot be undone.
+							</p>
 
-								<button
-									on:click={() => (showDeleteConfirmation = true)}
-									class="rounded border border-red-600 bg-white px-4 py-2 text-red-600 hover:bg-red-50"
-								>
-									Delete Group
-								</button>
-							{:else}
-								<div class="mb-6 rounded border border-red-300 bg-red-100 p-4 text-sm text-red-800">
-									<p class="mb-2 font-medium">Warning: This action cannot be undone</p>
-									<p>
-										Please type <strong>{group.name}</strong> below to confirm deletion.
-									</p>
-								</div>
-
-								<form on:submit|preventDefault={handleDeleteGroup} class="space-y-4">
-									<div>
-										<label for="confirmName" class="mb-1 block text-sm font-medium text-gray-700">
-											Confirm group name
-										</label>
-										<input
-											id="confirmName"
-											type="text"
-											bind:value={confirmationName}
-											placeholder="Enter group name to confirm"
-											class="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none"
-										/>
-									</div>
-
-									<div class="flex space-x-3">
-										<button
-											type="submit"
-											class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-50"
-											disabled={deleteLoading || confirmationName !== group.name}
-										>
-											{deleteLoading ? 'Deleting...' : 'Permanently Delete Group'}
-										</button>
-
-										<button
-											type="button"
-											on:click={() => {
-												showDeleteConfirmation = false;
-												confirmationName = '';
-											}}
-											class="rounded border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
-										>
-											Cancel
-										</button>
-									</div>
-								</form>
-							{/if}
+							<button
+								on:click={() => {
+									if (
+										confirm(
+											`Are you sure you want to delete "${group?.name}"? This action cannot be undone.`
+										)
+									) {
+										handleDeleteGroup();
+									}
+								}}
+								class="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-50"
+								disabled={deleteLoading}
+							>
+								{deleteLoading ? 'Deleting...' : 'Delete Group'}
+							</button>
 						</div>
 					</div>
 				{/if}

@@ -65,13 +65,15 @@ export const DELETE: RequestHandler = async ({ params, request, cookies }) => {
 			headers.set('Authorization', `Bearer ${token}`);
 		}
 
+		// Make the request to the backend
 		const result = await handleRequest(
 			'DELETE',
 			`/api/groups/${params.id}`,
-			null,
+			{}, // Empty body since we're using browser confirm dialog
 			headers,
 			cookies
 		);
+
 		return json(result.body, { status: result.status });
 	} catch (err) {
 		const error = err instanceof Error ? err : new Error('Unknown error occurred');
