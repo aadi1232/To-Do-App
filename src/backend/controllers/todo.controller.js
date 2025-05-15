@@ -1,8 +1,22 @@
 import * as todoService from '../services/todo.service.js';
+import * as socketService from '../services/socket.service.js';
 
 export async function createTodo(req, res) {
 	try {
 		const todo = await todoService.createTodo(req.user._id, req.body);
+		if (todo.group) {
+			socketService.notifyTodoChange(
+				todo.group.toString(),
+				'added',
+				{
+					_id: todo._id.toString(),
+					title: todo.title,
+					completed: todo.completed
+				},
+				req.user._id.toString(),
+				req.user.username
+			);
+		}
 		res.status(201).json(todo);
 	} catch (err) {
 		res.status(400).json({ message: err.message });
@@ -22,6 +36,19 @@ export async function updateTodo(req, res) {
 	try {
 		const { todoId } = req.params;
 		const todo = await todoService.updateTodo(req.user._id, todoId, req.body);
+		if (todo.group) {
+			socketService.notifyTodoChange(
+				todo.group.toString(),
+				'updated',
+				{
+					_id: todo._id.toString(),
+					title: todo.title,
+					completed: todo.completed
+				},
+				req.user._id.toString(),
+				req.user.username
+			);
+		}
 		res.json(todo);
 	} catch (err) {
 		res.status(400).json({ message: err.message });
@@ -32,6 +59,19 @@ export async function deleteTodo(req, res) {
 	try {
 		const { todoId } = req.params;
 		const result = await todoService.deleteTodo(req.user._id, todoId);
+		if (result.group) {
+			socketService.notifyTodoChange(
+				result.group.toString(),
+				'deleted',
+				{
+					_id: result._id.toString(),
+					title: result.title,
+					completed: result.completed
+				},
+				req.user._id.toString(),
+				req.user.username
+			);
+		}
 		res.json(result);
 	} catch (err) {
 		res.status(400).json({ message: err.message });

@@ -109,13 +109,13 @@ export async function updateMemberRole(
 	memberId: string,
 	newRole: 'co-lead' | 'elder' | 'member'
 ): Promise<Group> {
-	const response = await fetch('/api/groups/members/role', {
+	const response = await fetch(`/api/groups/${groupId}/member/${memberId}/role`, {
 		method: 'PUT',
 		headers: {
 			'Content-Type': 'application/json'
 		},
 		credentials: 'include',
-		body: JSON.stringify({ groupId, memberId, newRole })
+		body: JSON.stringify({ newRole })
 	});
 
 	if (!response.ok) {
@@ -134,13 +134,12 @@ export async function updateMemberRole(
  * @returns Updated group object
  */
 export async function removeMember(groupId: string, memberId: string): Promise<Group> {
-	const response = await fetch('/api/groups/members', {
+	const response = await fetch(`/api/groups/${groupId}/member/${memberId}`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		credentials: 'include',
-		body: JSON.stringify({ groupId, memberId })
+		credentials: 'include'
 	});
 
 	if (!response.ok) {

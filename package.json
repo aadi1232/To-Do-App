@@ -5,6 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"dev:with-socket": "concurrently \"npm run dev\" \"npm run socket:dev\"",
+		"socket:dev": "nodemon src/backend/standalone-socket-server.js",
+		"socket:start": "node src/backend/standalone-socket-server.js",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",

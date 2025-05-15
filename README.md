@@ -1,38 +1,69 @@
-# sv
+# To-Do App
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A collaborative todo application with real-time updates using Socket.IO.
 
-## Creating a project
+## Running the Application
 
-If you're seeing this, you've probably already done this step. Congrats!
+This application consists of two parts:
+
+1. The SvelteKit frontend and API
+2. A standalone Socket.IO server for real-time updates
+
+### Development
+
+To run both servers together during development:
 
 ```bash
-# create a new project in the current directory
-npx sv create
+# Install dependencies
+npm install
 
-# create a new project in my-app
-npx sv create my-app
+# Run both the SvelteKit app and Socket.IO server together
+npm run dev:with-socket
 ```
 
-## Developing
+This will start:
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+- SvelteKit on http://localhost:5173
+- Socket.IO server on http://localhost:3001
+
+### Running Servers Separately
+
+You can also run the servers separately:
 
 ```bash
+# Run just the SvelteKit app
 npm run dev
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+# Run just the Socket.IO server
+npm run socket:dev
 ```
 
-## Building
+### Production
 
-To create a production version of your app:
+For production:
 
 ```bash
+# Build the application
 npm run build
+
+# Start the SvelteKit server
+npm run preview
+
+# Start the Socket.IO server
+npm run socket:start
 ```
 
-You can preview the production build with `npm run preview`.
+## Socket Connection Errors
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+If you see "Socket connection error: server error" messages in the console, make sure:
+
+1. The Socket.IO server is running on port 3001
+2. You're logged in with a valid user account
+3. Your database connection is working properly
+
+## Features
+
+- Real-time collaborative todo lists
+- User authentication
+- Group functionality for shared todos
+- Real-time notifications when todos change

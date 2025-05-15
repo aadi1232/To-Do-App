@@ -1,6 +1,7 @@
 import Group from '../models/group.model.js';
 import User from '../models/user.model.js';
 import Todo from '../models/todo.model.js';
+import * as socketService from '../services/socket.service.js';
 
 // Create a new group
 export const createGroup = async (req, res) => {
@@ -175,6 +176,23 @@ export const respondToInvitation = async (req, res) => {
 
 		await group.save();
 
+		// If user accepted the invitation, notify other group members
+		if (response === 'accepted') {
+			// Get user data for notification
+			const user = await User.findById(userId).select('username email profileImage');
+
+			// Notify group members
+			socketService.notifyGroupJoined(
+				groupId,
+				{
+					_id: user._id.toString(),
+					username: user.username,
+					profileImage: user.profileImage
+				},
+				userId.toString()
+			);
+		}
+
 		// Populate the group data for the response
 		const populatedGroup = await Group.findById(group._id)
 			.populate('members.user', 'username email profileImage')
@@ -198,8 +216,12 @@ export const respondToInvitation = async (req, res) => {
 // Update member role
 export const updateMemberRole = async (req, res) => {
 	try {
-		const { groupId, memberId, newRole } = req.body;
+		// Extract params from URL path params instead of the body
+		const { id: groupId, memberId } = req.params;
+		const { newRole } = req.body;
 		const userId = req.user._id;
+
+		console.log(`Updating role for group: ${groupId}, member: ${memberId}, new role: ${newRole}`);
 
 		// Validate role
 		if (!['co-lead', 'elder', 'member'].includes(newRole)) {
@@ -289,8 +311,11 @@ export const updateMemberRole = async (req, res) => {
 // Remove member from group
 export const removeMember = async (req, res) => {
 	try {
-		const { groupId, memberId } = req.body;
+		// Extract params from URL path params instead of the body
+		const { id: groupId, memberId } = req.params;
 		const userId = req.user._id;
+
+		console.log(`Removing member from group: ${groupId}, member: ${memberId}`);
 
 		const group = await Group.findById(groupId);
 
@@ -442,6 +467,17 @@ export const inviteToGroup = async (req, res) => {
 		const populatedGroup = await Group.findById(group._id)
 			.populate('members.user', 'username email profileImage')
 			.populate('createdBy', 'username email profileImage');
+
+		// Send real-time notification to the invited user
+		socketService.notifyGroupInvitation(
+			userToInvite._id.toString(),
+			{
+				_id: group._id.toString(),
+				name: group.name,
+				imageUrl: group.imageUrl
+			},
+			req.user.username
+		);
 
 		res.status(200).json({
 			success: true,
