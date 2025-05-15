@@ -126,7 +126,23 @@ export async function updateGroupTodo(req, res) {
 export async function deleteGroupTodo(req, res) {
 	try {
 		const { todoId } = req.params;
-		await todoService.deleteGroupTodo(req.user._id, todoId);
+		const todoData = await todoService.deleteGroupTodo(req.user._id, todoId);
+
+		// If the group ID is available, send a notification through socket
+		if (todoData && todoData.group) {
+			socketService.notifyTodoChange(
+				todoData.group.toString(),
+				'deleted',
+				{
+					_id: todoData._id.toString(),
+					title: todoData.title,
+					completed: todoData.completed
+				},
+				req.user._id.toString(),
+				req.user.username
+			);
+		}
+
 		res.json({ message: 'Todo deleted successfully' });
 	} catch (err) {
 		res.status(400).json({ message: err.message });

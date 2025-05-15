@@ -2,102 +2,109 @@ import Todo from '../models/todo.model.js';
 import Group from '../models/group.model.js';
 
 /**
- * Check if a user has access to a specific group
- * @param {string} userId - The user ID 
+ * Get all todos for a specific group
  * @param {string} groupId - The group ID
- * @returns {Promise<boolean>} Whether the user has access
+ * @returns {Promise<Array<any>>} - Array of todos
  */
-export async function userHasAccessToGroup(userId, groupId) {
-  try {
-    const group = await Group.findById(groupId);
-    
-    if (!group) {
-      return false;
-    }
-    
-    // Check if user is a member of the group
-    const member = group.members.find(
-      m => m.user.toString() === userId.toString() && m.invitationStatus === 'accepted'
-    );
-    
-    return !!member;
-  } catch (error) {
-    console.error('Error checking group access:', error);
-    return false;
-  }
+export async function getTodosByGroup(groupId) {
+	try {
+		// Fetch todos for the group
+		const todos = await Todo.find({ group: groupId })
+			.sort({ createdAt: -1 })
+			.populate('createdBy', 'username email profileImage');
+
+		return todos;
+	} catch (error) {
+		console.error('Error fetching group todos:', error);
+		throw new Error('Failed to fetch group todos');
+	}
 }
 
 /**
- * Get all todos for a specific group
+ * Check if a user has access to a group
+ * @param {string} userId - The user ID
  * @param {string} groupId - The group ID
- * @returns {Promise<Array>} Array of todos
+ * @returns {Promise<boolean>} - Whether the user has access
  */
-export async function getTodosByGroup(groupId) {
-  try {
-    return await Todo.find({ group: groupId })
-      .populate('createdBy', 'username email')
-      .lean();
-  } catch (error) {
-    console.error('Error fetching group todos:', error);
-    throw error;
-  }
+export async function userHasAccessToGroup(userId, groupId) {
+	try {
+		// Check if user is a member of the group with accepted invitation
+		const group = await Group.findOne({
+			_id: groupId,
+			'members.user': userId,
+			'members.invitationStatus': 'accepted'
+		});
+
+		return !!group; // Convert to boolean
+	} catch (error) {
+		console.error('Error checking group access:', error);
+		return false;
+	}
 }
 
 /**
  * Create a new todo in a group
+ * @param {string} userId - The user ID
  * @param {string} groupId - The group ID
- * @param {string} userId - The user ID creating the todo
- * @param {Object} todoData - The todo data
- * @returns {Promise<Object>} The created todo
+ * @param {Object} data - The todo data
+ * @returns {Promise<Object>} - The created todo
  */
-export async function createGroupTodo(groupId, userId, todoData) {
-  try {
-    const newTodo = new Todo({
-      ...todoData,
-      group: groupId,
-      createdBy: userId
-    });
-    
-    await newTodo.save();
-    return newTodo;
-  } catch (error) {
-    console.error('Error creating group todo:', error);
-    throw error;
-  }
+export async function createTodo(userId, groupId, data) {
+	try {
+		const todoData = {
+			...data,
+			user: userId,
+			group: groupId,
+			createdBy: userId
+		};
+
+		const todo = await Todo.create(todoData);
+		return todo;
+	} catch (error) {
+		console.error('Error creating group todo:', error);
+		throw new Error('Failed to create group todo');
+	}
 }
 
 /**
- * Update a todo in a group
+ * Update a group todo
  * @param {string} todoId - The todo ID
- * @param {Object} updateData - The data to update
- * @returns {Promise<Object>} The updated todo
+ * @param {Object} data - The updated data
+ * @returns {Promise<Object>} - The updated todo
  */
-export async function updateGroupTodo(todoId, updateData) {
-  try {
-    const todo = await Todo.findByIdAndUpdate(
-      todoId,
-      { $set: updateData },
-      { new: true }
-    );
-    
-    return todo;
-  } catch (error) {
-    console.error('Error updating group todo:', error);
-    throw error;
-  }
+export async function updateTodo(todoId, data) {
+	try {
+		const todo = await Todo.findById(todoId);
+
+		if (!todo) {
+			throw new Error('Todo not found');
+		}
+
+		Object.assign(todo, data);
+		return await todo.save();
+	} catch (error) {
+		console.error('Error updating group todo:', error);
+		throw new Error('Failed to update group todo');
+	}
 }
 
 /**
- * Delete a todo from a group
+ * Delete a group todo
  * @param {string} todoId - The todo ID
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<Object>} - Deletion confirmation
  */
-export async function deleteGroupTodo(todoId) {
-  try {
-    await Todo.findByIdAndDelete(todoId);
-    return true;
-  } catch (error) {
-    console.error('Error deleting group todo:', error);
-    throw error;
-  }
-} 
+export async function deleteTodo(todoId) {
+	try {
+		const todo = await Todo.findById(todoId);
+
+		if (!todo) {
+			throw new Error('Todo not found');
+		}
+
+		await Todo.deleteOne({ _id: todoId });
+		return { message: 'Todo deleted successfully' };
+	} catch (error) {
+		console.error('Error deleting group todo:', error);
+		throw new Error('Failed to delete group todo');
+	}
+}
