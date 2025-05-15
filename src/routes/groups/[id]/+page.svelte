@@ -14,6 +14,8 @@
 	import type { Group, User, Todo } from '$lib/types';
 	import { getSuggestions } from '$lib/utils/ai/suggestTask.js';
 	import GroupTodoSearch from '$lib/components/GroupTodoSearch.svelte';
+	import { connected, initializeSocket, joinGroup } from '$lib/stores/socket.js';
+	import { get } from 'svelte/store';
 
 	const groupId = $page.params.id;
 
@@ -50,6 +52,11 @@
 	let memberActionLoading = false;
 	let deleteLoading = false;
 	let updateGroupLoading = false;
+
+	// Track the last refresh time to avoid excessive fetches
+	let lastRefreshTime = Date.now();
+	let pendingRefresh = false;
+	let syncInterval: number | null = null; // For background sync
 
 	onMount(async () => {
 		try {
@@ -94,6 +101,12 @@
 				editImageUrl = group.imageUrl || '';
 			}
 
+			// Set up real-time event listeners
+			setupRealTimeEvents();
+
+			// Start background sync (get updates every 5 seconds)
+			startBackgroundSync();
+
 			loading = false;
 		} catch (err) {
 			console.error('Error loading group:', err);
@@ -102,13 +115,179 @@
 		}
 	});
 
-	async function fetchTodos() {
+	onDestroy(() => {
+		// Clean up event listeners
+		removeRealTimeEvents();
+
+		// Clean up debounce timeout
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+
+		// Clear background sync interval
+		if (syncInterval) {
+			clearInterval(syncInterval);
+			syncInterval = null;
+		}
+	});
+
+	// Set up event listeners for real-time updates
+	function setupRealTimeEvents() {
+		if (typeof window !== 'undefined') {
+			console.log(`Setting up real-time event listeners for group ${groupId}`);
+
+			// Ensure socket connection is active
+			const isConnected = get(connected);
+			if (!isConnected && currentUser) {
+				console.log('Socket not connected, attempting to initialize...');
+				initializeSocket(currentUser._id, [groupId]);
+
+				// Set up a listener for when the socket connects
+				const unsubscribe = connected.subscribe((value) => {
+					if (value) {
+						console.log('Socket connected! Forcing immediate refresh');
+						fetchTodos();
+						unsubscribe();
+					}
+				});
+			} else {
+				// Make sure we're joined to this specific group
+				console.log('Ensuring we are joined to the group socket room');
+				joinGroup(groupId);
+			}
+
+			// Listen for general todo events
+			window.addEventListener('todo:added', handleTodoEvent);
+			window.addEventListener('todo:updated', handleTodoEvent);
+			window.addEventListener('todo:deleted', handleTodoEvent);
+			window.addEventListener('todo:completed', handleTodoEvent);
+
+			// Also listen for group-specific events
+			window.addEventListener(`todo:added-group-${groupId}`, handleGroupSpecificTodoEvent);
+			window.addEventListener(`todo:updated-group-${groupId}`, handleGroupSpecificTodoEvent);
+			window.addEventListener(`todo:deleted-group-${groupId}`, handleGroupSpecificTodoEvent);
+			window.addEventListener(`todo:completed-group-${groupId}`, handleGroupSpecificTodoEvent);
+
+			// Force an immediate refresh to ensure we have the latest data
+			setTimeout(() => {
+				console.log('Initial page load - forcing refresh of todos');
+				fetchTodos();
+			}, 300); // Reduced from 1000ms to 300ms for faster initial load
+		}
+	}
+
+	// Remove event listeners
+	function removeRealTimeEvents() {
+		if (typeof window !== 'undefined') {
+			// General events
+			window.removeEventListener('todo:added', handleTodoEvent);
+			window.removeEventListener('todo:updated', handleTodoEvent);
+			window.removeEventListener('todo:deleted', handleTodoEvent);
+			window.removeEventListener('todo:completed', handleTodoEvent);
+
+			// Group-specific events
+			window.removeEventListener(`todo:added-group-${groupId}`, handleGroupSpecificTodoEvent);
+			window.removeEventListener(`todo:updated-group-${groupId}`, handleGroupSpecificTodoEvent);
+			window.removeEventListener(`todo:deleted-group-${groupId}`, handleGroupSpecificTodoEvent);
+			window.removeEventListener(`todo:completed-group-${groupId}`, handleGroupSpecificTodoEvent);
+		}
+	}
+
+	// Handle group-specific todo events (these are already filtered by groupId)
+	function handleGroupSpecificTodoEvent(event: any) {
+		console.log(`DIRECT: Received group-specific ${event.type} event:`, event.detail);
+
+		// These events are already filtered for our group, so refresh right away
+		const now = Date.now();
+		if (now - lastRefreshTime > 300) {
+			// Short throttle for direct events
+			console.log('Immediately refreshing todos for group-specific event');
+			fetchTodos();
+			lastRefreshTime = now;
+		} else if (!pendingRefresh) {
+			// Set a delayed refresh to avoid too many fetches
+			pendingRefresh = true;
+			setTimeout(() => {
+				console.log('Executing delayed refresh for throttled event');
+				fetchTodos();
+				pendingRefresh = false;
+				lastRefreshTime = Date.now();
+			}, 500);
+		}
+	}
+
+	// Handle todo events
+	function handleTodoEvent(event: any) {
+		console.log('Received todo event in group page:', event.type);
+
 		try {
+			const data = event.detail;
+
+			// Verify this event is for our group
+			if (data && data.groupId === groupId) {
+				console.log(`Todo ${event.type.split(':')[1]} in this group, refreshing todos list`);
+
+				// Apply throttling to avoid excessive fetches
+				const now = Date.now();
+				if (now - lastRefreshTime > 500) {
+					// Refresh the todos list
+					fetchTodos();
+					lastRefreshTime = now;
+				} else if (!pendingRefresh) {
+					// Set a delayed refresh
+					pendingRefresh = true;
+					setTimeout(() => {
+						console.log('Executing delayed refresh for throttled event');
+						fetchTodos();
+						pendingRefresh = false;
+						lastRefreshTime = Date.now();
+					}, 700);
+				}
+			}
+		} catch (error) {
+			console.error('Error handling todo event:', error);
+		}
+	}
+
+	async function fetchTodos(isBackgroundSync = false) {
+		try {
+			if (!isBackgroundSync) {
+				console.log('Manually fetching todos for group:', groupId);
+			}
+
 			const fetchedTodos = await getGroupTodos(groupId);
-			todos = fetchedTodos;
+
+			if (!isBackgroundSync) {
+				console.log('Received todos:', fetchedTodos.length);
+			} else {
+				console.log('Background sync: received', fetchedTodos.length, 'todos');
+			}
+
+			// Compare with existing todos to see if there are any changes
+			// Skip comparison for manual refreshes to ensure we always update
+			if (!isBackgroundSync && todos.length === 0) {
+				// Always update if we don't have any todos yet
+				console.log('No todos loaded yet, updating the list');
+				todos = fetchedTodos;
+			} else if (
+				todos.length !== fetchedTodos.length ||
+				JSON.stringify(todos.map((t) => t._id).sort()) !==
+					JSON.stringify(fetchedTodos.map((t) => t._id).sort())
+			) {
+				console.log('Todos have changed, updating the list');
+				todos = fetchedTodos;
+			} else if (!isBackgroundSync) {
+				// Force update even if the IDs are the same for manual refreshes
+				// This ensures we catch completion status changes
+				console.log('Forcing update for manual refresh');
+				todos = [...fetchedTodos];
+			}
 		} catch (err) {
 			console.error('Error fetching todos:', err);
-			showNotification('Failed to load todos', 'error');
+			if (!isBackgroundSync) {
+				// Only show notification for manual refreshes
+				showNotification('Failed to load todos', 'error');
+			}
 		}
 	}
 
@@ -121,7 +300,24 @@
 		todoLoading = true;
 
 		try {
+			// Add the todo with basic information
 			await createGroupTodo(groupId, { title: newTodoTitle.trim() });
+
+			// Dispatch a custom event with additional metadata if needed
+			if (typeof window !== 'undefined') {
+				const todoEvent = new CustomEvent('todo:added', {
+					detail: {
+						groupId,
+						groupName: group?.name || 'Group',
+						userName: currentUser?.username || 'User',
+						title: newTodoTitle.trim()
+					},
+					bubbles: true,
+					cancelable: true
+				});
+				window.dispatchEvent(todoEvent);
+			}
+
 			newTodoTitle = '';
 			await fetchTodos();
 			showNotification('Todo added successfully');
@@ -135,7 +331,25 @@
 
 	async function handleToggleTodo(todo: Todo) {
 		try {
+			// Update the todo completion status
 			await updateGroupTodo(todo._id, { completed: !todo.completed });
+
+			// Dispatch a custom event with additional metadata if needed
+			if (typeof window !== 'undefined') {
+				const todoEvent = new CustomEvent('todo:updated', {
+					detail: {
+						groupId,
+						groupName: group?.name || 'Group',
+						userName: currentUser?.username || 'User',
+						title: todo.title,
+						completed: !todo.completed
+					},
+					bubbles: true,
+					cancelable: true
+				});
+				window.dispatchEvent(todoEvent);
+			}
+
 			await fetchTodos();
 		} catch (err) {
 			console.error('Error updating todo:', err);
@@ -145,7 +359,25 @@
 
 	async function handleDeleteTodo(todo: Todo) {
 		try {
+			// First delete the todo
 			await deleteGroupTodo(todo._id);
+
+			// Then notify via socket if needed (this would typically be handled server-side)
+			// This is a workaround if the server isn't sending the proper notification
+			if (typeof window !== 'undefined') {
+				const todoEvent = new CustomEvent('todo:deleted', {
+					detail: {
+						groupId,
+						groupName: group?.name || 'Group',
+						userName: currentUser?.username || 'User',
+						title: todo.title
+					},
+					bubbles: true,
+					cancelable: true
+				});
+				window.dispatchEvent(todoEvent);
+			}
+
 			await fetchTodos();
 			showNotification('Todo deleted successfully');
 		} catch (err) {
@@ -435,12 +667,21 @@
 		suggestionsVisible = false;
 	}
 
-	// Cleanup on component destroy
-	onDestroy(() => {
-		if (debounceTimeout) {
-			clearTimeout(debounceTimeout);
+	// Start background sync to periodically refresh todos
+	function startBackgroundSync() {
+		// Clear any existing interval first
+		if (syncInterval) {
+			clearInterval(syncInterval);
 		}
-	});
+
+		// Set new interval - fetch every 5 seconds (reduced from 15s)
+		syncInterval = window.setInterval(() => {
+			console.log('Background sync: checking for todo updates');
+			fetchTodos(true); // true means this is a background sync
+		}, 5000); // Every 5 seconds
+
+		console.log('Started background sync for todos');
+	}
 </script>
 
 <svelte:head>
@@ -519,7 +760,9 @@
 							{group.members.length} member{group.members.length !== 1 ? 's' : ''}
 						</p>
 						<p class="mt-2 text-sm text-gray-500">
-							Created: {new Date(group.createdAt).toLocaleDateString()}
+							Created: {group.createdAt
+								? new Date(group.createdAt).toLocaleDateString()
+								: 'Unknown date'}
 						</p>
 						{#if userRole}
 							<div class="mt-2">
@@ -600,8 +843,14 @@
 						<!-- Add the search component -->
 						<GroupTodoSearch
 							{groupId}
-							onToggleTodo={handleToggleTodo}
-							onDeleteTodo={handleDeleteTodo}
+							onToggleTodo={(todoId) => {
+								// Find the todo and then call handleToggleTodo
+								const todo = todos.find((t) => t._id === todoId);
+								if (todo) {
+									handleToggleTodo(todo);
+								}
+							}}
+							onDeleteTodo={(todo) => handleDeleteTodo(todo)}
 							canEdit={canAddTodos()}
 						/>
 

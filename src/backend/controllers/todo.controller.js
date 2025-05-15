@@ -36,11 +36,11 @@ export async function getTodoById(req, res) {
 	try {
 		const { todoId } = req.params;
 		const todo = await todoService.getTodoById(req.user._id, todoId);
-		
+
 		if (!todo) {
 			return res.status(404).json({ message: 'Todo not found' });
 		}
-		
+
 		res.json(todo);
 	} catch (err) {
 		res.status(400).json({ message: err.message });
@@ -97,6 +97,26 @@ export async function createGroupTodo(req, res) {
 	try {
 		const { groupId } = req.params;
 		const todo = await todoService.createGroupTodo(req.user._id, groupId, req.body);
+
+		// Send notification through socket
+		if (todo && todo.group) {
+			// Extract group name from the request body if provided
+			const groupName = req.body.groupName || '';
+
+			socketService.notifyTodoChange(
+				todo.group.toString(),
+				'added',
+				{
+					_id: todo._id.toString(),
+					title: todo.title,
+					completed: todo.completed
+				},
+				req.user._id.toString(),
+				req.user.username,
+				groupName
+			);
+		}
+
 		res.status(201).json(todo);
 	} catch (err) {
 		res.status(400).json({ message: err.message });
@@ -117,6 +137,32 @@ export async function updateGroupTodo(req, res) {
 	try {
 		const { todoId } = req.params;
 		const todo = await todoService.updateGroupTodo(req.user._id, todoId, req.body);
+
+		// Send notification through socket for real-time updates
+		if (todo && todo.group) {
+			// Determine the event type based on what was updated
+			let eventType = 'updated';
+			if ('completed' in req.body) {
+				eventType = req.body.completed ? 'completed' : 'updated';
+			}
+
+			// Extract group name from the request body if provided
+			const groupName = req.body.groupName || '';
+
+			socketService.notifyTodoChange(
+				todo.group.toString(),
+				eventType,
+				{
+					_id: todo._id.toString(),
+					title: todo.title,
+					completed: todo.completed
+				},
+				req.user._id.toString(),
+				req.user.username,
+				groupName
+			);
+		}
+
 		res.json(todo);
 	} catch (err) {
 		res.status(400).json({ message: err.message });
@@ -130,6 +176,8 @@ export async function deleteGroupTodo(req, res) {
 
 		// If the group ID is available, send a notification through socket
 		if (todoData && todoData.group) {
+			// We can't get the group name from the body in DELETE requests
+			// A client-side workaround is needed for this
 			socketService.notifyTodoChange(
 				todoData.group.toString(),
 				'deleted',

@@ -5,10 +5,10 @@
 
 /**
  * Get the Socket.IO instance
- * @returns {import('socket.io').Server} The Socket.IO server instance
+ * @returns {object|null} The Socket.IO server instance or null if not initialized
  */
 export function getIO() {
-	if (!global.io) {
+	if (typeof global === 'undefined' || !global.io) {
 		console.warn('Socket.IO not initialized yet');
 		return null;
 	}
@@ -48,7 +48,7 @@ export function notifyUser(userId, event, data) {
  * @param {string} [excludeUserId] - User ID to exclude from notification
  * @returns {boolean} Success status
  */
-export function notifyGroup(groupId, event, data, excludeUserId = null) {
+export function notifyGroup(groupId, event, data, excludeUserId) {
 	try {
 		const io = getIO();
 		if (!io) return false;
@@ -82,10 +82,13 @@ export function notifyGroup(groupId, event, data, excludeUserId = null) {
  * @returns {boolean} Success status
  */
 export function notifyGroupInvitation(userId, groupData, invitedBy) {
+	const groupName =
+		groupData && typeof groupData === 'object' && groupData.name ? groupData.name : 'a group';
+
 	return notifyUser(userId, 'group:invited', {
 		group: groupData,
 		invitedBy,
-		message: `${invitedBy} invited you to join ${groupData.name}`
+		message: `${invitedBy} invited you to join ${groupName}`
 	});
 }
 
@@ -97,12 +100,15 @@ export function notifyGroupInvitation(userId, groupData, invitedBy) {
  * @returns {boolean} Success status
  */
 export function notifyGroupJoined(groupId, userData, userId) {
+	const username =
+		userData && typeof userData === 'object' && userData.username ? userData.username : 'A user';
+
 	return notifyGroup(
 		groupId,
 		'group:joined',
 		{
 			user: userData,
-			message: `${userData.username} joined the group`
+			message: `${username} joined the group`
 		},
 		userId
 	); // Exclude the joining user from getting the notification
@@ -115,35 +121,82 @@ export function notifyGroupJoined(groupId, userData, userId) {
  * @param {object} todoData - The todo data
  * @param {string} userId - The ID of the user who made the change
  * @param {string} username - The username who made the change
+ * @param {string} groupName - The name of the group (optional)
  * @returns {boolean} Success status
  */
-export function notifyTodoChange(groupId, eventType, todoData, userId, username) {
+export function notifyTodoChange(groupId, eventType, todoData, userId, username, groupName = '') {
 	let message;
+	const groupDisplay = groupName || 'the group';
+	const todoTitle =
+		todoData && typeof todoData === 'object' && todoData.title ? todoData.title : 'a todo';
+
 	switch (eventType) {
 		case 'added':
-			message = `${username} added a new todo: ${todoData.title}`;
+			message = `${username} added a new todo in ${groupDisplay}: ${todoTitle}`;
 			break;
 		case 'updated':
-			message = `${username} updated a todo: ${todoData.title}`;
+			message = `${username} updated a todo in ${groupDisplay}: ${todoTitle}`;
 			break;
 		case 'deleted':
-			message = `${username} deleted a todo: ${todoData.title}`;
+			message = `${username} deleted a todo in ${groupDisplay}: ${todoTitle}`;
+			break;
+		case 'completed':
+			message = `${username} completed a todo in ${groupDisplay}: ${todoTitle}`;
 			break;
 		default:
-			message = `${username} modified a todo`;
+			message = `${username} modified a todo in ${groupDisplay}`;
 	}
 
-	return notifyGroup(
-		groupId,
-		`todo:${eventType}`,
-		{
+	// Get the Socket.IO instance
+	const io = getIO();
+	if (!io) return false;
+
+	try {
+		// Direct notification for faster updates - bypass the helper function
+		// to ensure immediate distribution without additional processing delay
+		const room = io.to(`group:${groupId}`);
+
+		// If we need to exclude the sender
+		if (userId) {
+			room.except(`user:${userId}`);
+		}
+
+		// Emit with priority
+		room.emit(`todo:${eventType}`, {
 			todo: todoData,
+			title: todoTitle,
 			message,
+			userName: username,
+			groupId, // Explicitly include groupId
+			groupName: groupDisplay,
+			timestamp: new Date().toISOString(),
 			performedBy: {
 				userId,
 				username
 			}
-		},
-		userId
-	); // Exclude the user who made the change
+		});
+
+		console.log(`Emitted priority ${eventType} to group:${groupId}`, { title: todoTitle });
+		return true;
+	} catch (error) {
+		console.error(`Error emitting ${eventType} to group:${groupId}:`, error);
+
+		// Fall back to the helper function if direct approach fails
+		return notifyGroup(
+			groupId,
+			`todo:${eventType}`,
+			{
+				todo: todoData,
+				title: todoTitle,
+				message,
+				userName: username,
+				groupName: groupDisplay,
+				performedBy: {
+					userId,
+					username
+				}
+			},
+			userId
+		);
+	}
 }
