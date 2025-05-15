@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  typesense:
+    image: typesense/typesense:0.25.1
+    ports:
+      - "8108:8108"
+    volumes:
+      - ./typesense-data:/data
+    environment:
+      - TYPESENSE_API_KEY=xyz
+    command: --data-dir /data --api-key=xyz --enable-cors
+    restart: unless-stopped 
