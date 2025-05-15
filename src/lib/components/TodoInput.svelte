@@ -9,6 +9,8 @@
   let suggestionsVisible = false;
   let selectedIndex = -1;
   let debounceTimeout: number | null = null;
+  let textColor = '#000000'; // Default text color
+  let isHighlighted = false; // Default highlight state
   
   // Fetch suggestions when input changes
   async function fetchSuggestions(): Promise<void> {
@@ -46,8 +48,16 @@
     if (!todoText.trim()) return;
     
     try {
-      await todos.addTodo(todoText);
+      // Add color and highlight information to the todo
+      const todoData = {
+        title: todoText,
+        textColor,
+        isHighlighted
+      };
+      await todos.addTodo(todoData);
       todoText = '';
+      textColor = '#000000'; // Reset to default color
+      isHighlighted = false; // Reset highlight state
       suggestions = [];
       suggestionsVisible = false;
     } catch (error) {
@@ -99,26 +109,55 @@
 <div class="relative">
   <form on:submit|preventDefault={handleSubmit} class="flex gap-2">
     <div class="relative flex-1">
-      <input
-        type="text"
-        bind:value={todoText}
-        on:input={handleInput}
-        on:keydown={handleKeydown}
-        on:blur={() => {
-          // Delay hiding suggestions to allow for clicks
-          setTimeout(() => {
-            suggestionsVisible = false;
-          }, 200);
-        }}
-        on:focus={() => {
-          // Show suggestions again if we have any
-          if (suggestions.length > 0) {
-            suggestionsVisible = true;
-          }
-        }}
-        placeholder="Add a new todo..."
-        class="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-      />
+      <div class="flex items-center gap-2">
+        <input
+          type="text"
+          bind:value={todoText}
+          on:input={handleInput}
+          on:keydown={handleKeydown}
+          on:blur={() => {
+            // Delay hiding suggestions to allow for clicks
+            setTimeout(() => {
+              suggestionsVisible = false;
+            }, 200);
+          }}
+          on:focus={() => {
+            // Show suggestions again if we have any
+            if (suggestions.length > 0) {
+              suggestionsVisible = true;
+            }
+          }}
+          placeholder="Add a new todo..."
+          class="flex-1 rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          style="color: {textColor};"
+        />
+        <input
+          type="color"
+          bind:value={textColor}
+          class="h-8 w-8 cursor-pointer rounded border border-gray-300 p-1"
+          title="Choose text color"
+        />
+        <button
+          type="button"
+          on:click={() => (isHighlighted = !isHighlighted)}
+          class="rounded border border-gray-300 p-1.5 {isHighlighted ? 'bg-yellow-200' : 'bg-white'}"
+          title="Toggle highlight"
+        >
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+            />
+          </svg>
+        </button>
+      </div>
       
       {#if suggestionsVisible}
         <div class="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-gray-200 bg-white shadow-lg">

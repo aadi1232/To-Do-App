@@ -6,7 +6,9 @@ const todoSchema = new mongoose.Schema(
 		completed: { type: Boolean, default: false },
 		user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 		group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null },
-		createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+		createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+		textColor: { type: String, default: '#000000' },
+		isHighlighted: { type: Boolean, default: false }
 	},
 	{ timestamps: true }
 );

@@ -39,6 +39,8 @@ export interface Todo {
 	createdBy: User | string;
 	createdAt?: string;
 	updatedAt?: string;
+	textColor?: string;
+	isHighlighted?: boolean;
 }
 
 export interface CreateGroupData {

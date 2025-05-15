@@ -21,6 +21,8 @@ export interface Todo {
 export interface CreateTodoData {
 	title: string;
 	completed?: boolean;
+	textColor?: string;
+	isHighlighted?: boolean;
 }
 
 export interface Group {

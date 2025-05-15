@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
-import type { Todo, CreateTodoData } from '../types';
+import type { Todo } from '../types';
+import type { CreateTodoData } from '../types/index';
 import { 
   getUserTodos, 
   createTodo as apiCreateTodo, 
@@ -44,12 +45,13 @@ function createTodosStore() {
     
     /**
      * Adds a new todo item
-     * @param {string} title - The todo title
+     * @param {string | CreateTodoData} input - The todo title or data
      * @returns {Promise<Todo|null>}
      */
-    addTodo: async (title: string) => {
+    addTodo: async (input: string | CreateTodoData) => {
       try {
-        const newTodo = await apiCreateTodo({ title });
+        const todoData = typeof input === 'string' ? { title: input } : input;
+        const newTodo = await apiCreateTodo(todoData);
         update(todos => [newTodo, ...todos]);
         return newTodo;
       } catch (error) {

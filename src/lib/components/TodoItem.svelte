@@ -100,7 +100,7 @@
         autofocus
       />
     {:else}
-      <span class={todo.completed ? 'text-gray-500' : ''}>
+      <span class={todo.completed ? 'text-gray-500' : ''} style="color: {todo.textColor || '#000000'}; background-color: {todo.isHighlighted ? '#fef08a' : 'transparent'};">
         {todo.title}
       </span>
     {/if}
