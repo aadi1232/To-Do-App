@@ -192,15 +192,77 @@ function setupNotificationListeners() {
 		if (socket) {
 			socket.on(eventType, (data) => {
 				console.log(`Received ${eventType} notification:`, data);
+
+				// Create and dispatch a custom event to the window
+				if (typeof window !== 'undefined') {
+					// Add detailed logging
+					console.log(`Dispatching ${eventType} event to window with data:`, data);
+
+					try {
+						// Add group ID to the event name for more specific targeting
+						const groupSpecificEventType = `${eventType}-group-${data.groupId}`;
+						console.log(`Also dispatching group-specific event: ${groupSpecificEventType}`);
+
+						// Create a custom event with the todo data
+						const todoEvent = new CustomEvent(eventType, {
+							detail: data,
+							bubbles: true,
+							cancelable: true
+						});
+
+						// Create a group-specific event too
+						const groupTodoEvent = new CustomEvent(groupSpecificEventType, {
+							detail: data,
+							bubbles: true,
+							cancelable: true
+						});
+
+						// Dispatch both events
+						window.dispatchEvent(todoEvent);
+						window.dispatchEvent(groupTodoEvent);
+
+						// Force any Svelte components to update by triggering a resize event
+						// This is a hack but can help flush UI updates
+						setTimeout(() => {
+							window.dispatchEvent(new Event('resize'));
+						}, 100);
+					} catch (eventError) {
+						console.error(`Error dispatching ${eventType} event:`, eventError);
+					}
+				}
+
+				// Create a user-friendly notification message based on event type
+				let message = '';
+				const userName = data.userName || 'Someone';
+				const groupName = data.groupName || 'a group';
+
+				switch (eventType) {
+					case 'todo:added':
+						message = `${userName} added a new todo in ${groupName}: "${data.title || 'New todo'}"`;
+						break;
+					case 'todo:updated':
+						message = `${userName} updated a todo in ${groupName}: "${data.title || 'A todo'}"`;
+						break;
+					case 'todo:deleted':
+						message = `${userName} deleted a todo in ${groupName}: "${data.title || 'A todo'}"`;
+						break;
+					case 'todo:completed':
+						message = `${userName} ${data.completed ? 'completed' : 'uncompleted'} a todo in ${groupName}: "${data.title || 'A todo'}"`;
+						break;
+					default:
+						message = `Todo update in ${groupName}`;
+				}
+
 				addNotification({
 					id: `todo_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
 					type: eventType,
 					title: 'Todo Update',
-					message: data.message,
+					message: message,
 					data: data,
 					timestamp: data.timestamp || new Date().toISOString(),
 					read: false
 				});
+
 				playNotificationSound();
 			});
 		}
