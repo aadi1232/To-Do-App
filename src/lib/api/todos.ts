@@ -1,4 +1,15 @@
-import type { Todo, CreateTodoData } from '../types';
+import type { Todo } from '$lib/types';
+
+// Define the CreateTodoData interface
+export interface CreateTodoData {
+	title: string;
+	description?: string;
+	completed?: boolean;
+	dueDate?: string;
+	priority?: 'low' | 'medium' | 'high';
+	textColor?: string;
+	isHighlighted?: boolean;
+}
 
 /**
  * API client functions for todo operations
@@ -108,16 +119,24 @@ export async function getGroupTodos(groupId: string): Promise<Todo[]> {
  * Create a new todo in a group
  * @param groupId ID of the group
  * @param todoData Todo data
+ * @param groupName Optional group name to include in notifications
  * @returns Created todo object
  */
-export async function createGroupTodo(groupId: string, todoData: CreateTodoData): Promise<Todo> {
+export async function createGroupTodo(
+	groupId: string,
+	todoData: CreateTodoData,
+	groupName?: string
+): Promise<Todo> {
 	const response = await fetch(`/api/todos/by-group/${groupId}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
 		},
 		credentials: 'include',
-		body: JSON.stringify(todoData)
+		body: JSON.stringify({
+			...todoData,
+			groupName: groupName || '' // Include group name for notifications
+		})
 	});
 
 	if (!response.ok) {

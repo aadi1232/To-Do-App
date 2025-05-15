@@ -78,7 +78,7 @@
 	<h1 class="mb-8 text-3xl font-bold">Create a New Group</h1>
 
 	{#if success}
-		<div class="mb-4 rounded border border-green-400 bg-green-100 px-4 py-3 text-green-700">
+		<div class="mb-4 rounded border border-gray-400 bg-gray-100 px-4 py-3 text-gray-700">
 			<p>Group created successfully! Redirecting...</p>
 		</div>
 	{:else}
@@ -96,7 +96,7 @@
 					type="text"
 					id="groupName"
 					bind:value={groupName}
-					class="w-full rounded border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+					class="w-full rounded border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-black focus:outline-none"
 					placeholder="Enter group name"
 					required
 				/>
@@ -111,7 +111,7 @@
 					type="url"
 					id="imageUrl"
 					bind:value={imageUrl}
-					class="w-full rounded border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+					class="w-full rounded border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-black focus:outline-none"
 					placeholder="https://example.com/image.jpg"
 				/>
 			</div>
@@ -124,13 +124,13 @@
 					<input
 						type="email"
 						bind:value={inviteeEmail}
-						class="flex-1 rounded-l border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+						class="flex-1 rounded-l border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-black focus:outline-none"
 						placeholder="Enter email address"
 					/>
 					<button
 						type="button"
 						on:click={addInvitee}
-						class="rounded-r bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+						class="rounded-r bg-black px-4 py-2 text-white hover:bg-gray-800"
 					>
 						Add
 					</button>
@@ -161,7 +161,7 @@
 			<div class="flex justify-end">
 				<button
 					type="submit"
-					class="rounded bg-blue-500 px-6 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+					class="rounded bg-black px-6 py-2 text-white hover:bg-gray-800 disabled:opacity-50"
 					disabled={loading}
 				>
 					{loading ? 'Creating...' : 'Create Group'}
@@ -170,7 +170,7 @@
 		</form>
 
 		<div class="mt-4 text-center">
-			<a href="/groups" class="text-blue-500 hover:underline">Back to groups</a>
+			<a href="/groups" class="text-black hover:underline">Back to groups</a>
 		</div>
 	{/if}
 </div>

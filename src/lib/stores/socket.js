@@ -334,13 +334,53 @@ export function playNotificationSound() {
 	if (!browser) return;
 
 	try {
+		console.log('Attempting to play notification sound');
+
+		// Create a new audio element
 		const audio = new Audio('/notification.mp3');
-		audio.volume = 0.5;
-		audio.play().catch((err) => {
-			console.warn('Could not play notification sound:', err.message);
+
+		// Set properties
+		audio.volume = 0.6;
+
+		// Preload the audio
+		audio.load();
+
+		// Add event listeners for debugging
+		audio.addEventListener('play', () => {
+			console.log('Notification sound started playing');
 		});
+
+		audio.addEventListener('ended', () => {
+			console.log('Notification sound finished playing');
+		});
+
+		audio.addEventListener('error', (e) => {
+			console.error('Audio error:', e);
+		});
+
+		// Force play with user interaction simulation
+		const playPromise = audio.play();
+
+		if (playPromise !== undefined) {
+			playPromise
+				.then(() => {
+					console.log('Successfully playing notification sound');
+				})
+				.catch((err) => {
+					console.warn('Could not play notification sound:', err.message);
+					// Try an alternative approach for browsers with autoplay restrictions
+					document.addEventListener(
+						'click',
+						function playOnClick() {
+							audio.play().catch((e) => console.error('Even with click, could not play sound:', e));
+							document.removeEventListener('click', playOnClick);
+						},
+						{ once: true }
+					);
+				});
+		}
 	} catch (err) {
-		console.warn('Error playing notification sound:', err);
+		console.warn('Error creating audio element:', err);
 	}
 }
 

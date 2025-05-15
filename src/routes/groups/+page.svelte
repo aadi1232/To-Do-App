@@ -136,7 +136,6 @@
 		<!-- My Groups Section -->
 		{#if groups.length > 0}
 			<div>
-				<h2 class="mb-4 text-xl font-medium text-gray-700">My Groups</h2>
 				<div class="grid grid-cols-1 gap-3">
 					{#each groups as group}
 						<a
@@ -188,7 +187,7 @@
 				</div>
 				<a
 					href="/groups/create"
-					class="inline-flex items-center rounded-md bg-blue-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none"
+					class="inline-flex items-center rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-900 focus:ring-4 focus:ring-black focus:outline-none"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -215,7 +214,8 @@
 		<div class="mt-8 flex justify-center">
 			<a
 				href="/groups/create"
-				class="inline-flex items-center rounded-md bg-blue-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 focus:outline-none"
+				class="inline-flex items-center rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-900 focus:ring-4 focus:ring-black focus:outline-none"
+
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

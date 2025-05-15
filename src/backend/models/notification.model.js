@@ -7,34 +7,29 @@ const notificationSchema = new mongoose.Schema(
 			ref: 'User',
 			required: true
 		},
+		sender: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'User'
+		},
 		type: {
 			type: String,
-			enum: ['group_invitation', 'todo_assigned', 'todo_completed', 'role_changed', 'group_update'],
-			required: true
-		},
-		message: {
-			type: String,
-			required: true
-		},
-		group: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Group',
-			default: null
-		},
-		todo: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Todo',
-			default: null
-		},
-		actor: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'User',
-			default: null
+			required: true,
+			enum: ['todo:added', 'todo:deleted', 'todo:completed', 'group:invite', 'group:join']
 		},
 		read: {
 			type: Boolean,
 			default: false
-		}
+		},
+		message: String,
+		relatedGroup: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Group'
+		},
+		relatedTodo: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Todo'
+		},
+		data: Object
 	},
 	{ timestamps: true }
 );

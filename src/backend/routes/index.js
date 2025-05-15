@@ -5,6 +5,7 @@ import todoRoutes from './todo.routes.js';
 import groupRoutes from './group.routes.js';
 import aiRoutes from './ai.routes.js';
 import searchRoutes from './search.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.use('/todos', todoRoutes);
 router.use('/groups', groupRoutes);
 router.use('/ai', aiRoutes);
 router.use('/search', searchRoutes);
+router.use('/notifications', notificationRoutes);
 
-export default router; 
+export default router;

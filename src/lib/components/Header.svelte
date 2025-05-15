@@ -2,9 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { showShortcutsTooltip } from '$lib/stores/shortcuts';
-	import NotificationBadge from './notifications/NotificationBadge.svelte';
-	import NotificationList from './notifications/NotificationList.svelte';
-	import { unreadCount } from '$lib/stores/socket';
+	import NotificationButton from './NotificationButton.svelte';
+	import NotificationList from './NotificationList.svelte';
+	import { unreadCount } from '$lib/stores/notifications';
 
 	interface User {
 		_id: string;
@@ -14,7 +14,6 @@
 
 	let user: User | null = null;
 	let loading = true;
-	let notificationsOpen = false;
 
 	onMount(async () => {
 		try {
@@ -49,14 +48,6 @@
 	function showShortcuts() {
 		showShortcutsTooltip.set(true);
 	}
-
-	function toggleNotifications() {
-		notificationsOpen = !notificationsOpen;
-	}
-
-	function closeNotifications() {
-		notificationsOpen = false;
-	}
 </script>
 
 <!-- Header with profile section -->
@@ -70,6 +61,7 @@
 					<a href="/" class="rounded px-3 py-2 hover:bg-gray-100">Home</a>
 					<a href="/groups" class="rounded px-3 py-2 hover:bg-gray-100">Show Groups</a>
 					<a href="/groups/create" class="rounded px-3 py-2 hover:bg-gray-100">Create Group</a>
+					<a href="/notifications" class="rounded px-3 py-2 hover:bg-gray-100">Notifications</a>
 				</nav>
 			{/if}
 		</div>
@@ -100,35 +92,7 @@
 						<line x1="12" y1="17" x2="12.01" y2="17"></line>
 					</svg>
 				</button>
-				<div class="relative ml-4">
-					<button
-						type="button"
-						class="relative flex items-center rounded-full p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-						aria-label="Notifications"
-						on:click={toggleNotifications}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-							/>
-						</svg>
-
-						<NotificationBadge />
-					</button>
-
-					{#if notificationsOpen}
-						<NotificationList isOpen={true} onClose={closeNotifications} />
-					{/if}
-				</div>
+			
 				<a href="/profile" class="flex items-center gap-2">
 					<div
 						class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-black text-white"

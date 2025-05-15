@@ -98,11 +98,12 @@ export async function createGroupTodo(req, res) {
 		const { groupId } = req.params;
 		const todo = await todoService.createGroupTodo(req.user._id, groupId, req.body);
 
-		// Send notification through socket
+		// First send the real-time notification through socket
 		if (todo && todo.group) {
 			// Extract group name from the request body if provided
 			const groupName = req.body.groupName || '';
 
+			// Send real-time notification using socket
 			socketService.notifyTodoChange(
 				todo.group.toString(),
 				'added',
@@ -115,6 +116,39 @@ export async function createGroupTodo(req, res) {
 				req.user.username,
 				groupName
 			);
+
+			// Also create persistent notifications for all group members
+			try {
+				// Prepare notification message
+				const message = `${req.user.username} added a new todo in ${groupName || 'the group'}: ${todo.title}`;
+
+				// Make internal request to notification service
+				const notificationResult = await fetch(
+					`${req.protocol}://${req.get('host')}/api/notifications/group`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Cookie: req.headers.cookie, // Forward authentication
+							Authorization: req.headers.authorization || ''
+						},
+						body: JSON.stringify({
+							groupId: todo.group.toString(),
+							type: 'todo:added',
+							message,
+							todoId: todo._id.toString(),
+							todoTitle: todo.title
+						})
+					}
+				);
+
+				if (!notificationResult.ok) {
+					console.error('Failed to create notifications:', await notificationResult.text());
+				}
+			} catch (notifyErr) {
+				// Don't fail the main request if notification creation fails
+				console.error('Error creating notifications:', notifyErr);
+			}
 		}
 
 		res.status(201).json(todo);
@@ -176,8 +210,7 @@ export async function deleteGroupTodo(req, res) {
 
 		// If the group ID is available, send a notification through socket
 		if (todoData && todoData.group) {
-			// We can't get the group name from the body in DELETE requests
-			// A client-side workaround is needed for this
+			// Send real-time notification using socket
 			socketService.notifyTodoChange(
 				todoData.group.toString(),
 				'deleted',
@@ -189,6 +222,51 @@ export async function deleteGroupTodo(req, res) {
 				req.user._id.toString(),
 				req.user.username
 			);
+
+			// Also create persistent notifications for all group members
+			try {
+				// Get group name if possible (might need to fetch it)
+				let groupName = '';
+				try {
+					const Group = (await import('../models/group.model.js')).default;
+					const group = await Group.findById(todoData.group);
+					if (group) {
+						groupName = group.name;
+					}
+				} catch (groupErr) {
+					console.error('Error fetching group name:', groupErr);
+				}
+
+				// Prepare notification message
+				const message = `${req.user.username} deleted a todo from ${groupName || 'the group'}: ${todoData.title}`;
+
+				// Make internal request to notification service
+				const notificationResult = await fetch(
+					`${req.protocol}://${req.get('host')}/api/notifications/group`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Cookie: req.headers.cookie, // Forward authentication
+							Authorization: req.headers.authorization || ''
+						},
+						body: JSON.stringify({
+							groupId: todoData.group.toString(),
+							type: 'todo:deleted',
+							message,
+							todoId: todoData._id.toString(),
+							todoTitle: todoData.title
+						})
+					}
+				);
+
+				if (!notificationResult.ok) {
+					console.error('Failed to create notifications:', await notificationResult.text());
+				}
+			} catch (notifyErr) {
+				// Don't fail the main request if notification creation fails
+				console.error('Error creating notifications:', notifyErr);
+			}
 		}
 
 		res.json({ message: 'Todo deleted successfully' });

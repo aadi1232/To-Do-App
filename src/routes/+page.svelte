@@ -45,24 +45,23 @@
 	}
 </script>
 
-
 <div class="min-h-screen bg-white">
 	<!-- Main content -->
 	<main class="container mx-auto p-4">
 		{#if user}
 			<div class="mx-auto mt-8 max-w-2xl">
 				<h2 class="mb-6 text-center text-2xl font-medium">Your Todo List</h2>
-				
+
 				<!-- Todo Search Bar -->
 				<div class="mb-4">
 					<TodoSearch />
 				</div>
-				
+
 				<!-- Todo Input with AI Suggestions -->
 				<div class="mb-6">
 					<TodoInput />
 				</div>
-				
+
 				<!-- Todo List -->
 				<TodoList />
 			</div>
@@ -71,13 +70,24 @@
 				<h2 class="text-lg font-medium">Welcome to the Todo App</h2>
 				<p class="mt-2 text-gray-600">Please log in or sign up to get started.</p>
 				<div class="mt-4">
-					<a href="/auth/login" class="mx-2 inline-block rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">Log In</a>
-					<a href="/auth/signup" class="mx-2 inline-block rounded-md border border-blue-600 px-4 py-2 text-blue-600 hover:bg-blue-50">Sign Up</a>
+					<a
+						href="/auth/login"
+						class="mx-2 inline-block rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
+						>Log In</a
+					>
+					<a
+						href="/auth/signup"
+						class="mx-2 inline-block rounded-md border border-black px-4 py-2 text-black hover:bg-gray-100"
+						>Sign Up</a
+					>
 				</div>
 			</div>
 		{:else}
-			<div class="flex justify-center pt-20">
-				<div class="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+			<div class="flex flex-col items-center justify-center py-16">
+				<div
+					class="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-black"
+				></div>
+				<p class="mt-4 text-gray-600">Loading...</p>
 			</div>
 		{/if}
 	</main>

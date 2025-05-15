@@ -138,7 +138,7 @@
 	{#if notificationMessage}
 		<div
 			class="fixed top-4 right-4 z-50 rounded-lg p-4 shadow-lg {notificationType === 'success'
-				? 'bg-green-100 text-green-800'
+				? 'bg-gray-100 text-gray-800'
 				: 'bg-red-100 text-red-800'}"
 			transition:fade
 		>
@@ -280,7 +280,7 @@
 								<div class="self-center">
 									<button
 										on:click={() => goto(`/groups/${group._id}`)}
-										class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+										class="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
 									>
 										View Group
 									</button>
@@ -343,7 +343,7 @@
 									<div class="flex gap-2 sm:self-center">
 										<button
 											on:click={() => handleInviteResponse(invite._id, 'accepted')}
-											class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+											class="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
 										>
 											Accept
 										</button>

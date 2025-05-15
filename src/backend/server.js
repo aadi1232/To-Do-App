@@ -7,8 +7,8 @@ import todoRoutes from './routes/todo.routes.js';
 import groupRoutes from './routes/group.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import searchRoutes from './routes/search.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import * as typesenseService from './services/typesense.service.js';
-
 
 // Create Express app
 const app = express();
@@ -39,7 +39,7 @@ app.use('/api/todos', todoRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/search', searchRoutes);
-
+app.use('/api/notifications', notificationRoutes);
 
 // Not found handler
 app.use((req, res, next) => {
@@ -85,7 +85,7 @@ async function initializeTypesense() {
 export async function handleRequest(method, url, body, headers, cookies) {
 	// Ensure DB connection
 	ensureDbConnected().catch(() => {});
-	
+
 	// Initialize Typesense
 	initializeTypesense().catch(() => {});
 
