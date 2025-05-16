@@ -58,7 +58,7 @@ export function initializeSocket(userId, groupIds = []) {
 
 			// Fallback to auto-detection logic
 			if (process.env.NODE_ENV === 'production') {
-				// In production, use same domain but with secure WebSocket
+				// In production, use same domain with api path for Vercel deployment
 				return window.location.origin;
 			} else {
 				// In development, use local Socket.io server
@@ -85,6 +85,8 @@ export function initializeSocket(userId, groupIds = []) {
 		reconnectionAttempts: 3, // Only try reconnecting 3 times
 		reconnectionDelay: 1000,
 		timeout: 5000, // Lower timeout for faster feedback
+		// Path for Vercel deployment
+		path: process.env.NODE_ENV === 'production' ? '/api/socket.io/' : undefined,
 		// Sending auth data - send userId directly
 		auth: {
 			userId
