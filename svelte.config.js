@@ -8,12 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	kit: {
-		// Adapter-specific options
 		adapter: adapter({
-			// See https://github.com/sveltejs/kit/tree/master/packages/adapter-vercel
-			external: [],
-			edge: false,
-			split: false
+			runtime: 'nodejs18.x'
 		}),
 		alias: {
 			$lib: path.resolve(__dirname, './src/lib'),

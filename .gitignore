@@ -1,15 +1,23 @@
+.DS_Store
 node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.example
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+.vercel
+.output
 
 # Output
 .output
 .vercel
 .netlify
 .wrangler
-/.svelte-kit
-/build
 
 # OS
-.DS_Store
 Thumbs.db
 
 # Env
@@ -17,10 +25,6 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
-
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
 
 # Typesense
 typesense-server
