@@ -1,6 +1,6 @@
 {
-	"buildCommand": "npm run build",
-	"devCommand": "npm run dev",
+	"buildCommand": "npm run vercel-build",
+	"devCommand": "npx vite dev",
 	"installCommand": "npm install",
 	"framework": "sveltekit",
 	"outputDirectory": "build",
