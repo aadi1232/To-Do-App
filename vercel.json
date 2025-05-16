@@ -1,8 +1,8 @@
 {
 	"version": 2,
-	"buildCommand": "node vercel-build.js",
-	"devCommand": "npx vite dev",
-	"installCommand": "npm install",
+	"buildCommand": "npm run build",
+	"devCommand": "npm run dev",
+	"installCommand": "npm ci",
 	"framework": "sveltekit",
 	"outputDirectory": "build",
 	"regions": ["iad1"],
