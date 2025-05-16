@@ -21,3 +21,9 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Typesense
+typesense-server
+typesense-server-*.tar.gz
+typesense-server.md5.txt
+typesense.log
