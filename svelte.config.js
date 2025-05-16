@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = {
 	kit: {
 		adapter: adapter({
-			runtime: 'nodejs18.x'
+			runtime: 'nodejs20.x'
 		}),
 		alias: {
 			$lib: path.resolve(__dirname, './src/lib'),
