@@ -3,7 +3,15 @@ import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/todo-app';
+const MONGO_URI = process.env.MONGO_URI;
+
+// Debug info
+console.log('Environment check:');
+console.log('MONGO_URI available:', !!MONGO_URI);
+console.log(
+	'MONGO_URI value (masked):',
+	MONGO_URI ? `${MONGO_URI.substring(0, 20)}...` : 'undefined'
+);
 
 // Track connection state
 export const dbState = {
@@ -24,7 +32,9 @@ const connectDB = async () => {
 		dbState.isConnected = false;
 		dbState.error = null;
 
-		console.log(`Connecting to MongoDB at: ${MONGO_URI}`);
+		console.log(
+			`Connecting to MongoDB at: ${MONGO_URI ? MONGO_URI.substring(0, 20) + '...' : 'undefined'}`
+		);
 
 		const conn = await mongoose.connect(MONGO_URI, {
 			serverSelectionTimeoutMS: 10000, // Timeout after 10 seconds

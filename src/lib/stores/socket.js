@@ -47,12 +47,26 @@ export function initializeSocket(userId, groupIds = []) {
 
 	console.log('Initializing socket connection for user:', userId);
 
-	// Connect to the standalone Socket.IO server (running on port 3001)
+	// Connect to the Socket.IO server - adapted for Vercel deployment
 	const socketServerUrl =
 		browser &&
-		(process.env.NODE_ENV === 'production'
-			? window.location.origin // In production, use same domain
-			: 'http://localhost:3001'); // In development, use dedicated port
+		(() => {
+			// Check for environment variable first (useful for production config in Vercel)
+			if (typeof process !== 'undefined' && process.env && process.env.SOCKET_SERVER_URL) {
+				return process.env.SOCKET_SERVER_URL;
+			}
+
+			// Fallback to auto-detection logic
+			if (process.env.NODE_ENV === 'production') {
+				// In production, use same domain but with secure WebSocket
+				return window.location.origin;
+			} else {
+				// In development, use local Socket.io server
+				return 'http://localhost:3001';
+			}
+		})();
+
+	console.log('Using Socket.IO server URL:', socketServerUrl);
 
 	// Create a dummy socket for development if server is not running
 	const useDummySocket = false; // Set to true to test without a real socket server
