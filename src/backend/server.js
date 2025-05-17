@@ -74,10 +74,15 @@ async function ensureDbConnected() {
 // Initialize Typesense when the server starts
 async function initializeTypesense() {
 	try {
-		await typesenseService.initTypesense();
-		console.log('Typesense initialized successfully');
+		const success = await typesenseService.initTypesense();
+		if (success) {
+			console.log('Typesense initialized successfully');
+		} else {
+			console.log('Typesense initialization skipped or failed, using fallback search');
+		}
 	} catch (error) {
 		console.error('Failed to initialize Typesense:', error);
+		console.log('Will use fallback search functionality');
 	}
 }
 
@@ -86,8 +91,14 @@ export async function handleRequest(method, url, body, headers, cookies) {
 	// Ensure DB connection
 	ensureDbConnected().catch(() => {});
 
-	// Initialize Typesense
-	initializeTypesense().catch(() => {});
+	// Initialize Typesense but don't block on it
+	// This way, auth routes will work even if Typesense is not available
+	if (!url.includes('/api/auth/')) {
+		// Only initialize Typesense for non-auth routes
+		initializeTypesense().catch((err) => {
+			console.error('Non-blocking Typesense init error:', err);
+		});
+	}
 
 	console.log(`handleRequest: ${method} ${url}`);
 

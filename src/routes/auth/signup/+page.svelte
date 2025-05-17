@@ -1,6 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { setUser } from '$lib/stores/user';
 
 	let username = '';
 	let email = '';
@@ -46,6 +47,9 @@
 				}
 				throw new Error(data.message || 'Something went wrong');
 			}
+
+			// Update the user store with the newly registered user data
+			setUser(data);
 
 			// Redirect to home page after successful signup
 			goto('/');

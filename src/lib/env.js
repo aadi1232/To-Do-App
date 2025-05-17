@@ -24,6 +24,7 @@ try {
 }
 
 // Export environment variables - ensure defaults are set correctly
-export const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/todo-app';
+export const MONGO_URI = process.env.MONGO_URI;
 export const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_do_not_use_in_production';
-export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyC4a4kwcr5swbJeUa_U0aCdHnLfzOXuPrM';
+export const GEMINI_API_KEY =
+	process.env.GEMINI_API_KEY || 'AIzaSyC4a4kwcr5swbJeUa_U0aCdHnLfzOXuPrM';

@@ -1,0 +1,54 @@
+services:
+  # Web service for the SvelteKit app
+  - type: web
+    name: todo-app
+    env: node
+    buildCommand: ./render-build.sh
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: TYPESENSE_API_KEY
+        sync: false
+      - key: TYPESENSE_HOST
+        sync: false
+      - key: TYPESENSE_PORT
+        value: '8108'
+      - key: TYPESENSE_PROTOCOL
+        value: 'http'
+      - key: SOCKET_SERVER_URL
+        fromService:
+          name: socket-io-server
+          type: web
+          property: url
+
+  # Socket.IO server
+  - type: web
+    name: socket-io-server
+    env: node
+    buildCommand: npm install
+    startCommand: npm run socket:start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Optional: Typesense server
+  - type: pserv
+    name: typesense
+    env: docker
+    dockerfilePath: ./Dockerfile.typesense
+    disk:
+      name: typesense-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: TYPESENSE_API_KEY
+        sync: false

@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-vercel';
+import adapter from '@sveltejs/adapter-node';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -8,9 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	kit: {
-		adapter: adapter({
-			runtime: 'nodejs20.x'
-		}),
+		adapter: adapter(),
 		alias: {
 			$lib: path.resolve(__dirname, './src/lib'),
 			'$lib/*': path.resolve(__dirname, './src/lib/*'),
