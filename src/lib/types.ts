@@ -51,6 +51,8 @@ export interface Todo {
 	updatedAt?: string;
 	textColor?: string;
 	isHighlighted?: boolean;
+	deadline?: 'today' | 'tomorrow' | 'later' | null;
+	taggedMembers?: User[] | string[];
 }
 
 export interface CreateTodoData {
@@ -58,6 +60,8 @@ export interface CreateTodoData {
 	completed?: boolean;
 	textColor?: string;
 	isHighlighted?: boolean;
+	deadline?: 'today' | 'tomorrow' | 'later' | null;
+	taggedMembers?: string[];
 }
 
 export interface CreateGroupData {

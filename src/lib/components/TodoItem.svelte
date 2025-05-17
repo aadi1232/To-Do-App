@@ -8,6 +8,7 @@
 
 	let isEditing = false;
 	let editedTitle = todo.title;
+	let editedDeadline = todo.deadline || null;
 	let showDeleteConfirm = false;
 	let isCompleting = false;
 	let showCompleteConfirm = false;
@@ -16,11 +17,15 @@
 	function handleEdit() {
 		isEditing = true;
 		editedTitle = todo.title;
+		editedDeadline = todo.deadline || null;
 	}
 
 	async function handleSave() {
 		if (editedTitle.trim()) {
-			await todos.updateTodo(todo._id, { title: editedTitle });
+			await todos.updateTodo(todo._id, { 
+				title: editedTitle,
+				deadline: editedDeadline
+			});
 			isEditing = false;
 		}
 	}
@@ -28,6 +33,7 @@
 	function handleCancel() {
 		isEditing = false;
 		editedTitle = todo.title;
+		editedDeadline = todo.deadline || null;
 	}
 
 	async function handleDelete() {
@@ -76,6 +82,20 @@
 			handleCancel();
 		}
 	}
+
+	function getDeadlineColor(deadline: string | null | undefined) {
+		if (!deadline) return '';
+		switch (deadline) {
+			case 'today':
+				return 'bg-red-100 text-red-800';
+			case 'tomorrow':
+				return 'bg-orange-100 text-orange-800';
+			case 'later':
+				return 'bg-blue-100 text-blue-800';
+			default:
+				return '';
+		}
+	}
 </script>
 
 <div
@@ -92,23 +112,44 @@
 		/>
 
 		{#if isEditing}
-			<input
-				type="text"
-				bind:value={editedTitle}
-				on:keydown={handleKeydown}
-				on:blur={handleSave}
-				class="flex-1 rounded border border-gray-300 px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-				autofocus
-			/>
+			<div class="flex flex-col gap-2">
+				<input
+					type="text"
+					bind:value={editedTitle}
+					on:keydown={handleKeydown}
+					class="flex-1 rounded border border-gray-300 px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+					autofocus
+				/>
+				
+				<div class="flex gap-2">
+					<select 
+						bind:value={editedDeadline} 
+						class="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+					>
+						<option value={null}>No deadline</option>
+						<option value="today">Today</option>
+						<option value="tomorrow">Tomorrow</option>
+						<option value="later">Later</option>
+					</select>
+				</div>
+			</div>
 		{:else}
-			<span
-				class={todo.completed ? 'text-gray-500' : ''}
-				style="color: {todo.textColor || '#000000'}; background-color: {todo.isHighlighted
-					? '#fef08a'
-					: 'transparent'};"
-			>
-				{todo.title}
-			</span>
+			<div class="flex flex-col">
+				<span
+					class={todo.completed ? 'text-gray-500' : ''}
+					style="color: {todo.textColor || '#000000'}; background-color: {todo.isHighlighted
+						? '#fef08a'
+						: 'transparent'};"
+				>
+					{todo.title}
+				</span>
+				
+				{#if todo.deadline}
+					<span class={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${getDeadlineColor(todo.deadline)}`}>
+						{todo.deadline}
+					</span>
+				{/if}
+			</div>
 		{/if}
 	</div>
 

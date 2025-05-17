@@ -66,36 +66,14 @@ function createTodosStore() {
      * @returns {Promise<Todo|null>}
      */
     updateTodo: async (id: string, data: Partial<CreateTodoData>) => {
-      let currentTodo: Todo | undefined = undefined;
-      
-      update(todos => {
-        const todoIndex = todos.findIndex(t => t._id === id);
-        if (todoIndex === -1) return todos;
-        
-        currentTodo = todos[todoIndex];
-        const updatedTodos = [...todos];
-        updatedTodos[todoIndex] = { ...updatedTodos[todoIndex], ...data };
-        
-        return updatedTodos;
-      });
-      
       try {
         const updatedTodo = await apiUpdateTodo(id, data);
-        
-        update(todos => todos.map(t => 
-          t._id === id ? updatedTodo : t
+        update(todos => todos.map(todo => 
+          todo._id === id ? { ...todo, ...updatedTodo } : todo
         ));
-        
         return updatedTodo;
       } catch (error) {
         console.error('Error updating todo:', error);
-        
-        if (currentTodo) {
-          update(todos => todos.map(t => 
-            t._id === id ? currentTodo! : t
-          ));
-        }
-        
         return null;
       }
     },

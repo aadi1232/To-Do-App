@@ -104,6 +104,25 @@ export async function createGroupTodo(userId, groupId, data) {
 		throw new Error('You do not have permission to create todos in this group');
 	}
 
+	// Validate tagged members if provided
+	if (data.taggedMembers && data.taggedMembers.length > 0) {
+		// Convert array if it's a single string
+		if (typeof data.taggedMembers === 'string') {
+			data.taggedMembers = [data.taggedMembers];
+		}
+		
+		// Verify all tagged members are actually in the group
+		const groupMemberIds = group.members
+			.filter(m => m.invitationStatus === 'accepted')
+			.map(m => m.user.toString());
+		
+		const validTaggedMembers = data.taggedMembers.filter(memberId => 
+			groupMemberIds.includes(memberId.toString())
+		);
+		
+		data.taggedMembers = validTaggedMembers;
+	}
+
 	const todoData = {
 		...data,
 		user: userId,
@@ -126,9 +145,31 @@ export async function getGroupTodos(userId, groupId) {
 		throw new Error('Group not found or you are not a member');
 	}
 
-	return await Todo.find({ group: groupId })
+	// Find the user's role in the group
+	const userMember = group.members.find((member) => member.user.toString() === userId.toString());
+	const isAdmin = ['admin', 'co-lead', 'elder'].includes(userMember.role);
+
+	// Construct the query - either:
+	// 1. The user is admin/co-lead/elder and can see all todos
+	// 2. The user is the creator of the todo
+	// 3. The user is tagged in the todo
+	let query = { 
+		group: groupId,
+		$or: [
+			{ createdBy: userId },
+			{ taggedMembers: userId }
+		]
+	};
+
+	// If user is admin or higher role, they can see all todos
+	if (isAdmin) {
+		query = { group: groupId };
+	}
+
+	return await Todo.find(query)
 		.sort({ createdAt: -1 })
-		.populate('createdBy', 'username email profileImage');
+		.populate('createdBy', 'username email profileImage')
+		.populate('taggedMembers', 'username email profileImage');
 }
 
 export async function updateGroupTodo(userId, todoId, data) {

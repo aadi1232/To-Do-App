@@ -110,26 +110,60 @@ export async function createGroupTodo(req, res) {
 				{
 					_id: todo._id.toString(),
 					title: todo.title,
-					completed: todo.completed
+					completed: todo.completed,
+					taggedMembers: todo.taggedMembers ? todo.taggedMembers.map(m => m.toString()) : []
 				},
 				req.user._id.toString(),
 				req.user.username,
 				groupName
 			);
 
-			// Also create persistent notifications for all group members
 			try {
-				// Prepare notification message
+				// Prepare notification message for the group
 				const message = `${req.user.username} added a new todo in ${groupName || 'the group'}: ${todo.title}`;
 
-				// Make internal request to notification service
+				// Special notification for tagged members
+				if (todo.taggedMembers && todo.taggedMembers.length > 0) {
+					// For each tagged member, create a personalized notification
+					for (const memberId of todo.taggedMembers) {
+						const tagNotification = await fetch(
+							`${req.protocol}://${req.get('host')}/api/notifications`,
+							{
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									Cookie: req.headers.cookie,
+									Authorization: req.headers.authorization || ''
+								},
+								body: JSON.stringify({
+									recipient: memberId.toString(),
+									type: 'todo:tagged',
+									message: `${req.user.username} tagged you in a todo: ${todo.title}`,
+									relatedGroup: groupId,
+									relatedTodo: todo._id.toString(),
+									data: {
+										todoTitle: todo.title,
+										groupName: groupName || '',
+										taggedBy: req.user.username
+									}
+								})
+							}
+						);
+
+						if (!tagNotification.ok) {
+							console.error('Failed to create tag notification:', await tagNotification.text());
+						}
+					}
+				}
+
+				// Create regular group notification
 				const notificationResult = await fetch(
 					`${req.protocol}://${req.get('host')}/api/notifications/group`,
 					{
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
-							Cookie: req.headers.cookie, // Forward authentication
+							Cookie: req.headers.cookie,
 							Authorization: req.headers.authorization || ''
 						},
 						body: JSON.stringify({
