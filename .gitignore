@@ -8,12 +8,9 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-.vercel
-.output
 
 # Output
 .output
-.vercel
 .netlify
 .wrangler
 
@@ -31,3 +28,4 @@ typesense-server
 typesense-server-*.tar.gz
 typesense-server.md5.txt
 typesense.log
+typesense-data/

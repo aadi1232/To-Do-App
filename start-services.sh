@@ -13,4 +13,4 @@ echo "Testing Typesense connection..."
 node test-typesense.js
 
 echo "Starting the application..."
-npm run dev 
+npm run dev:with-socket 
