@@ -1,5 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { setUser } from '$lib/stores/user';
 
 	let username = '';
 	let password = '';
@@ -37,6 +38,9 @@
 				}
 				throw new Error(data.message || 'Something went wrong');
 			}
+
+			// Update the user store with the logged-in user data
+			setUser(data);
 
 			// Redirect to home page after successful login
 			goto('/');

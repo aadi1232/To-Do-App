@@ -9,6 +9,15 @@
 	import NotificationsContainer from '$lib/components/notifications/NotificationsContainer.svelte';
 	import { initializeSocket, cleanup, connected } from '$lib/stores/socket';
 	import { getUserGroups } from '$lib/api/groups';
+	import { fetchCurrentUser, user } from '$lib/stores/user';
+
+	// Define User type to match store definition
+	type User = {
+		_id: string;
+		username: string;
+		email?: string;
+		profileImage?: string;
+	};
 
 	let { children } = $props();
 
@@ -17,85 +26,73 @@
 	const MAX_SOCKET_INIT_ATTEMPTS = 3;
 	let socketInitTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	// Socket initialization - only for authenticated users
-	async function initSocket() {
-		if (!browser) return;
+	// Initialize user data and socket connection
+	onMount(async () => {
+		if (browser) {
+			// Fetch current user (this will update the user store)
+			const userData = await fetchCurrentUser();
 
-		socketInitAttempts++;
-		console.log(`Socket initialization attempt ${socketInitAttempts}`);
+			// Initialize socket only if user is logged in
+			if (userData) {
+				// Initialize socket connection if user is logged in
+				initSocketConnection();
+			}
+		}
+	});
 
+	// Initialize socket connection with retry logic
+	async function initSocketConnection() {
 		try {
-			// Check if user is logged in
-			const response = await fetch('/api/auth/me');
-			if (response.ok) {
-				const user = await response.json();
+			const currentUser = $user as User | null;
+			if (currentUser && currentUser._id) {
+				// Fetch user groups
+				const groups = await getUserGroups();
+				const groupIds = groups.map((group) => group._id);
 
-				// If user is logged in, fetch their groups and initialize socket
-				if (user && user._id) {
-					console.log('User authenticated, initializing socket:', user._id);
-
-					try {
-						// Get user's groups for socket rooms
-						const groups = await getUserGroups();
-						const groupIds = groups.map((group) => group._id);
-
-						// Initialize the socket connection with user ID and group IDs
-						initializeSocket(user._id, groupIds);
-
-						// Reset attempts on success
-						socketInitAttempts = 0;
-					} catch (groupError) {
-						console.error('Error fetching user groups:', groupError);
-						// Still try to initialize socket even without groups
-						initializeSocket(user._id, []);
-					}
-				} else {
-					console.warn('User data incomplete or missing ID');
-				}
-			} else if (response.status === 401) {
-				// User not authenticated, no need for socket
-				console.log('User not authenticated, skipping socket initialization');
-			} else {
-				console.warn(`Auth check failed with status ${response.status}`);
-				retrySocketInit();
+				// Initialize socket with user ID and group IDs
+				await initializeSocket(currentUser._id.toString(), groupIds);
 			}
 		} catch (error) {
-			console.error('Error initializing socket:', error);
-			retrySocketInit();
-		}
-	}
-
-	function retrySocketInit() {
-		if (socketInitAttempts < MAX_SOCKET_INIT_ATTEMPTS) {
-			console.log(`Will retry socket init in ${socketInitAttempts * 2}s`);
-			if (socketInitTimeout) {
-				clearTimeout(socketInitTimeout);
+			console.error('Socket connection error:', error);
+			// Retry logic for socket connection
+			socketInitAttempts++;
+			if (socketInitAttempts < MAX_SOCKET_INIT_ATTEMPTS) {
+				console.log(
+					`Retrying socket connection (attempt ${socketInitAttempts + 1}/${MAX_SOCKET_INIT_ATTEMPTS})...`
+				);
+				socketInitTimeout = setTimeout(initSocketConnection, 2000);
+			} else {
+				console.error(
+					`Failed to connect to socket server after ${MAX_SOCKET_INIT_ATTEMPTS} attempts`
+				);
 			}
-			socketInitTimeout = setTimeout(initSocket, socketInitAttempts * 2000);
-		} else {
-			console.error('Max socket initialization attempts reached');
 		}
 	}
 
-	onMount(initSocket);
+	// Watch for user changes to handle socket connection
+	$effect(() => {
+		const currentUser = $user as User | null;
+		if (currentUser && !$connected) {
+			// If user logs in and socket isn't connected, try to connect
+			initSocketConnection();
+		}
+	});
 
+	// Cleanup on destroy
 	onDestroy(() => {
-		// Clean up socket connection and any timeouts
-		cleanup();
 		if (socketInitTimeout) {
 			clearTimeout(socketInitTimeout);
 		}
+		cleanup();
 	});
 </script>
 
-<div class="app">
+<div class="min-h-screen">
 	<Header />
-	<main>
-		{@render children()}
-	</main>
 	<KeyboardShortcuts />
 	<ShortcutsTooltip />
 	<NotificationsContainer />
+	{@render children()}
 </div>
 
 <style>

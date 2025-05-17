@@ -5,43 +5,20 @@
 	import NotificationButton from './NotificationButton.svelte';
 	import NotificationList from './NotificationList.svelte';
 	import { unreadCount } from '$lib/stores/notifications';
-
-	interface User {
-		_id: string;
-		username: string;
-		profileImage?: string;
-	}
-
-	let user: User | null = null;
-	let loading = true;
+	import { user, userLoading, logoutUser, fetchCurrentUser } from '$lib/stores/user';
 
 	onMount(async () => {
-		try {
-			// Fetch user info to check if logged in
-			const response = await fetch('/api/auth/me');
-
-			if (response.ok) {
-				user = await response.json();
-			}
-		} catch (error) {
-			console.error('Error fetching user:', error);
-		} finally {
-			loading = false;
+		// No need to fetch here, it will be handled by the layout
+		// If for some reason the user isn't loaded yet, trigger a fetch
+		if (!$user && !$userLoading) {
+			await fetchCurrentUser();
 		}
 	});
 
 	async function handleLogout() {
-		try {
-			const response = await fetch('/api/auth/logout', {
-				method: 'POST'
-			});
-
-			if (response.ok) {
-				user = null;
-				goto('/auth/login');
-			}
-		} catch (error) {
-			console.error('Error logging out:', error);
+		const success = await logoutUser();
+		if (success) {
+			goto('/auth/login');
 		}
 	}
 
@@ -56,7 +33,7 @@
 		<div class="flex items-center">
 			<h1 class="mr-6 text-xl font-bold">To-Do App</h1>
 
-			{#if user && !loading}
+			{#if $user && !$userLoading}
 				<nav class="flex space-x-4">
 					<a href="/" class="rounded px-3 py-2 hover:bg-gray-100">Home</a>
 					<a href="/groups" class="rounded px-3 py-2 hover:bg-gray-100">Show Groups</a>
@@ -66,9 +43,9 @@
 			{/if}
 		</div>
 
-		{#if loading}
+		{#if $userLoading}
 			<div class="h-10 w-36 animate-pulse rounded bg-gray-200"></div>
-		{:else if user}
+		{:else if $user}
 			<div class="flex items-center gap-3">
 				<button
 					class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 hover:bg-gray-100"
@@ -92,18 +69,22 @@
 						<line x1="12" y1="17" x2="12.01" y2="17"></line>
 					</svg>
 				</button>
-			
+
 				<a href="/profile" class="flex items-center gap-2">
 					<div
 						class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-black text-white"
 					>
-						{#if user.profileImage && user.profileImage.length > 2}
-							<img src={user.profileImage} alt={user.username} class="h-full w-full object-cover" />
+						{#if $user.profileImage && $user.profileImage.length > 2}
+							<img
+								src={$user.profileImage}
+								alt={$user.username}
+								class="h-full w-full object-cover"
+							/>
 						{:else}
-							{user.profileImage || user.username.charAt(0).toUpperCase()}
+							{$user.profileImage || $user.username.charAt(0).toUpperCase()}
 						{/if}
 					</div>
-					<span>{user.username}</span>
+					<span>{$user.username}</span>
 				</a>
 				<button
 					class="rounded border border-gray-300 bg-white px-3 py-1 text-sm hover:bg-gray-100"
