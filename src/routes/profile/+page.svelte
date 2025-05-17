@@ -181,12 +181,9 @@
 							</div>
 						{/if}
 					</div>
-					<div>
+					<div class="mt-8">
 						<h2 class="text-xl font-semibold">{user.username}</h2>
 						<p class="mt-1 text-gray-600">{user.email}</p>
-						<p class="mt-2 text-sm text-gray-500">
-							Member since: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-						</p>
 					</div>
 				</div>
 			</div>
