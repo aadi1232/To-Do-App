@@ -9,6 +9,8 @@ export interface CreateTodoData {
 	priority?: 'low' | 'medium' | 'high';
 	textColor?: string;
 	isHighlighted?: boolean;
+	deadline?: 'today' | 'tomorrow' | 'later' | null;
+	taggedMembers?: string[];
 }
 
 /**

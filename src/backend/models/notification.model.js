@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema(
 		type: {
 			type: String,
 			required: true,
-			enum: ['todo:added', 'todo:deleted', 'todo:completed', 'group:invite', 'group:join']
+			enum: ['todo:added', 'todo:deleted', 'todo:completed', 'todo:tagged', 'group:invite', 'group:join']
 		},
 		read: {
 			type: Boolean,

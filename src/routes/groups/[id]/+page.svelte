@@ -17,6 +17,7 @@
 	import { connected, initializeSocket, joinGroup } from '$lib/stores/socket.js';
 	import { onlineUsers } from '$lib/stores/onlineUsers';
 	import { get } from 'svelte/store';
+	import GroupTodoDeadlines from '$lib/components/deadline/GroupTodoDeadlines.svelte';
 
 	const groupId = $page.params.id;
 
@@ -64,6 +65,11 @@
 	const unsubscribe = onlineUsers.subscribe((value) => {
 		onlineUsersList = value;
 	});
+
+	// Add deadline state and tagged members state
+	let selectedDeadline: 'today' | 'tomorrow' | 'later' | null = null;
+	let selectedTaggedMembers: string[] = [];
+	let showMemberList = false;
 
 	onMount(async () => {
 		try {
@@ -311,7 +317,11 @@
 
 		try {
 			// Add the todo with basic information
-			await createGroupTodo(groupId, { title: newTodoTitle.trim() });
+			await createGroupTodo(groupId, { 
+				title: newTodoTitle.trim(),
+				deadline: selectedDeadline,
+				taggedMembers: selectedTaggedMembers.length > 0 ? selectedTaggedMembers : undefined
+			});
 
 			// Dispatch a custom event with additional metadata if needed
 			if (typeof window !== 'undefined') {
@@ -320,7 +330,9 @@
 						groupId,
 						groupName: group?.name || 'Group',
 						userName: currentUser?.username || 'User',
-						title: newTodoTitle.trim()
+						title: newTodoTitle.trim(),
+						deadline: selectedDeadline,
+						taggedMembers: selectedTaggedMembers
 					},
 					bubbles: true,
 					cancelable: true
@@ -329,6 +341,9 @@
 			}
 
 			newTodoTitle = '';
+			selectedDeadline = null; // Reset deadline after adding
+			selectedTaggedMembers = []; // Reset tagged members
+			showMemberList = false;
 			await fetchTodos();
 			showNotification('Todo added successfully');
 		} catch (err) {
@@ -341,8 +356,11 @@
 
 	async function handleToggleTodo(todo: Todo) {
 		try {
-			// Update the todo completion status
-			await updateGroupTodo(todo._id, { completed: !todo.completed });
+			// Update the todo completion status while preserving deadline
+			await updateGroupTodo(todo._id, { 
+				completed: !todo.completed,
+				deadline: todo.deadline
+			});
 
 			// Dispatch a custom event with additional metadata if needed
 			if (typeof window !== 'undefined') {
@@ -352,7 +370,8 @@
 						groupName: group?.name || 'Group',
 						userName: currentUser?.username || 'User',
 						title: todo.title,
-						completed: !todo.completed
+						completed: !todo.completed,
+						deadline: todo.deadline
 					},
 					bubbles: true,
 					cancelable: true
@@ -698,6 +717,24 @@
 		if (!userId) return false;
 		return onlineUsersList.has(userId);
 	}
+
+	function toggleMemberTag(memberId: string) {
+		const index = selectedTaggedMembers.indexOf(memberId);
+		if (index === -1) {
+			selectedTaggedMembers = [...selectedTaggedMembers, memberId];
+		} else {
+			selectedTaggedMembers = selectedTaggedMembers.filter(id => id !== memberId);
+		}
+	}
+
+	function getMemberById(id: string) {
+		if (!group || !group.members) return null;
+		return group.members.find(m => 
+			typeof m.user === 'string' 
+				? m.user === id 
+				: m.user._id === id
+		);
+	}
 </script>
 
 <svelte:head>
@@ -872,34 +909,148 @@
 
 						{#if canAddTodos()}
 							<form class="mb-6" on:submit|preventDefault={handleAddTodo}>
-								<div class="flex">
-									<input
-										type="text"
-										bind:value={newTodoTitle}
-										placeholder="Add a new todo..."
-										class="flex-grow rounded-l border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-										on:input={handleTodoInput}
-										on:keydown={handleTodoKeydown}
-										on:blur={() => {
-											// Delay hiding suggestions to allow for clicks
-											setTimeout(() => {
-												suggestionsVisible = false;
-											}, 200);
-										}}
-										on:focus={() => {
-											// Show suggestions again if we have any
-											if (suggestions.length > 0) {
-												suggestionsVisible = true;
-											}
-										}}
-									/>
-									<button
-										type="submit"
-										class="rounded-r bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-										disabled={todoLoading || !newTodoTitle.trim()}
-									>
-										{todoLoading ? 'Adding...' : 'Add'}
-									</button>
+								<div class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+									<div class="flex items-center justify-between">
+										<div class="flex flex-grow">
+											<input
+												type="text"
+												bind:value={newTodoTitle}
+												placeholder="What needs to be done?"
+												class="flex-grow border-none w-full focus:outline-none text-gray-700"
+												on:input={handleTodoInput}
+												on:keydown={handleTodoKeydown}
+												on:blur={() => {
+													// Delay hiding suggestions to allow for clicks
+													setTimeout(() => {
+														suggestionsVisible = false;
+													}, 200);
+												}}
+												on:focus={() => {
+													// Show suggestions again if we have any
+													if (suggestions.length > 0) {
+														suggestionsVisible = true;
+													}
+												}}
+											/>
+										</div>
+									</div>
+									
+									<div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+										<div class="flex items-center space-x-3">
+											<span class="text-sm font-medium text-gray-600">When:</span>
+											<div class="flex space-x-2">
+												<button
+													type="button"
+													class="flex items-center px-4 py-1.5 border border-gray-200 rounded shadow-sm text-sm {selectedDeadline === 'today' ? 'bg-red-50 text-red-800 font-medium border-red-200' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+													on:click={() => selectedDeadline = selectedDeadline === 'today' ? null : 'today'}
+												>
+													<span class="mr-2 text-base">📅</span> Today
+												</button>
+												<button
+													type="button"
+													class="flex items-center px-4 py-1.5 border border-gray-200 rounded shadow-sm text-sm {selectedDeadline === 'tomorrow' ? 'bg-orange-50 text-orange-800 font-medium border-orange-200' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+													on:click={() => selectedDeadline = selectedDeadline === 'tomorrow' ? null : 'tomorrow'}
+												>
+													<span class="mr-2 text-base">🗓️</span> Tomorrow
+												</button>
+												<button
+													type="button"
+													class="flex items-center px-4 py-1.5 border border-gray-200 rounded shadow-sm text-sm {selectedDeadline === 'later' ? 'bg-blue-50 text-blue-800 font-medium border-blue-200' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+													on:click={() => selectedDeadline = selectedDeadline === 'later' ? null : 'later'}
+												>
+													<span class="mr-2 text-base">⏳</span> Later
+												</button>
+											</div>
+										</div>
+										
+										<div class="flex items-center space-x-2">
+											<div class="relative">
+												<button
+													type="button"
+													class="flex items-center px-3 py-1.5 border border-gray-200 rounded text-sm shadow-sm {selectedTaggedMembers.length > 0 ? 'bg-purple-50 text-purple-800 font-medium border-purple-200' : 'bg-white text-gray-700 hover:bg-gray-50'}"
+													on:click={() => showMemberList = !showMemberList}
+												>
+													<span class="mr-2 text-base">👤</span> 
+													{selectedTaggedMembers.length ? `Tagged ${selectedTaggedMembers.length} member${selectedTaggedMembers.length > 1 ? 's' : ''}` : 'Tag members'}
+												</button>
+												
+												{#if showMemberList && group && group.members}
+													<div class="absolute top-full left-0 mt-1 w-64 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-md shadow-lg z-10">
+														<div class="p-2 text-xs font-medium text-gray-500 border-b">
+															Select members to tag (only they will see this task)
+														</div>
+														<ul class="py-1">
+															{#each group.members.filter(m => m.invitationStatus === 'accepted' && (typeof m.user !== 'string' ? m.user._id !== currentUser?._id : m.user !== currentUser?._id)) as member}
+																<li 
+																	class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer {selectedTaggedMembers.includes(typeof member.user === 'string' ? member.user : member.user._id) ? 'bg-purple-50' : ''}"
+																	on:click={() => toggleMemberTag(typeof member.user === 'string' ? member.user : member.user._id)}
+																>
+																	<div class="flex items-center">
+																		<input 
+																			type="checkbox" 
+																			checked={selectedTaggedMembers.includes(typeof member.user === 'string' ? member.user : member.user._id)} 
+																			class="mr-2 h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+																			on:change={() => toggleMemberTag(typeof member.user === 'string' ? member.user : member.user._id)}
+																		/>
+																		<div class="relative h-6 w-6 mr-2 rounded-full bg-gray-200 overflow-hidden">
+																			{#if typeof member.user !== 'string' && member.user.profileImage}
+																				<img 
+																					src={member.user.profileImage}
+																					alt={typeof member.user === 'string' ? 'Unknown' : member.user.username}
+																					class="h-full w-full object-cover"
+																				/>
+																			{:else}
+																				<div class="h-full w-full flex items-center justify-center bg-blue-500 text-white text-xs">
+																					{typeof member.user === 'string' ? 'U' : member.user.username.charAt(0).toUpperCase()}
+																				</div>
+																			{/if}
+																		</div>
+																		<span class="text-sm">
+																			{typeof member.user === 'string' ? 'Unknown' : member.user.username}
+																		</span>
+																	</div>
+																</li>
+															{/each}
+														</ul>
+													</div>
+												{/if}
+											</div>
+											
+											<button
+												type="submit"
+												class="bg-gray-800 text-white px-4 py-2 rounded shadow-sm hover:bg-gray-700 font-medium text-sm"
+												disabled={todoLoading || !newTodoTitle.trim()}
+											>
+												{todoLoading ? 'Adding...' : 'Add Task'}
+											</button>
+										</div>
+									</div>
+									
+									{#if selectedTaggedMembers.length > 0}
+										<div class="mt-2 pt-2 border-t border-gray-100">
+											<div class="flex flex-wrap gap-2">
+												{#each selectedTaggedMembers as memberId}
+													{#if getMemberById(memberId)}
+														{@const member = getMemberById(memberId)}
+														<div class="inline-flex items-center px-2 py-1 bg-purple-50 text-purple-800 rounded-full text-xs">
+															<span class="mr-1">
+																{typeof member.user === 'string' ? 'Unknown' : member.user.username}
+															</span>
+															<button 
+																type="button"
+																class="text-purple-600 hover:text-purple-800"
+																on:click={() => toggleMemberTag(memberId)}
+															>
+																<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+																</svg>
+															</button>
+														</div>
+													{/if}
+												{/each}
+											</div>
+										</div>
+									{/if}
 								</div>
 							</form>
 						{/if}
@@ -936,6 +1087,7 @@
 							</div>
 						{/if}
 
+						<!-- Replace the old todos list with the deadline categorized view -->
 						{#if todos.length === 0}
 							<p class="py-8 text-center text-gray-500">
 								{#if userRole === 'member'}
@@ -945,52 +1097,13 @@
 								{/if}
 							</p>
 						{:else}
-							<ul class="space-y-2">
-								{#each todos as todo}
-									<li
-										class="flex items-center justify-between rounded border border-gray-200 bg-white p-3 shadow-sm"
-									>
-										<div class="flex items-center">
-											<input
-												type="checkbox"
-												checked={todo.completed}
-												on:change={() => handleToggleTodo(todo)}
-												class="mr-3 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-												disabled={userRole === 'member'}
-											/>
-											<span class={todo.completed ? 'text-gray-500 line-through' : ''}>
-												{todo.title}
-											</span>
-										</div>
-										<div class="flex items-center space-x-2">
-											<span class="text-xs text-gray-500">
-												{typeof todo.createdBy === 'string' ? 'Unknown' : todo.createdBy.username}
-											</span>
-											{#if canAddTodos()}
-												<button
-													on:click={() => handleDeleteTodo(todo)}
-													class="ml-2 text-red-500 hover:text-red-700"
-													title="Delete"
-												>
-													<svg
-														class="h-5 w-5"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M6 18L18 6M6 6l12 12"
-														></path>
-													</svg>
-												</button>
-											{/if}
-										</div>
-									</li>
-								{/each}
-							</ul>
+							<GroupTodoDeadlines 
+								allTodos={todos} 
+								{groupId}
+								canEdit={canAddTodos()}
+								onToggleTodo={handleToggleTodo}
+								onDeleteTodo={handleDeleteTodo}
+							/>
 						{/if}
 					</div>
 				{:else if activeTab === 'members'}
