@@ -281,12 +281,7 @@
 			<button on:click={disconnectDirectly} class="warning"> Disconnect </button>
 		</div>
 
-		<div class="status-indicator">
-			Socket Status:
-			<span class={directSocket && directSocket.connected ? 'connected' : 'disconnected'}>
-				{directSocket && directSocket.connected ? 'Connected' : 'Disconnected'}
-			</span>
-		</div>
+		 
 	</div>
 
 	<div class="test-actions">
