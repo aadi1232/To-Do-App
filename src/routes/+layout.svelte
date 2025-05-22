@@ -16,7 +16,7 @@
 		if (browser) {
 			posthog.init('phc_e52xCDt7vkMC1LXwvQqWS36BTIlK4HgN01M5dt86g5H', {
 				api_host: 'https://us.i.posthog.com',
-				person_profiles: 'identified_only'
+				person_profiles: 'always'
 			});
 
 			const userData = await fetchCurrentUser();
