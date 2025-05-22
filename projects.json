@@ -1,0 +1,165 @@
+{
+	"projects": [
+		{
+			"timestamp": "5/17/2025 12:40:34",
+			"projectName": "Mercado",
+			"teamName": "CodeWalkers",
+			"githubLink": "https://github.com/armaanansari121/Mercado",
+			"deployedLink": "https://mercado-ruby.vercel.app/",
+			"problemSolved": "Addressing Market Imperatives through blockchain technology, including global creative nexus, equitable asset valuation, meritocratic exposure, and more.",
+			"challenges": [
+				"Creating a Very Complex 3-Tiered Smart Contract",
+				"Using IPFS to Manage Data",
+				"Integrating Chart.js",
+				"Decentralized Finance (DeFi) implementation"
+			],
+			"teamMembers": ["Mohammed Armaan Ansari", "Harsh Kasana", "Prakhar Srivastava"],
+			"tracks": ["Ethereum Track", "Polygon Track"],
+			"photos": ["https://drive.google.com/open?id=1-qz2aafmcAtwNbjrk6cTJYjpuraCTQq9"],
+			"youtubeLink": "https://www.youtube.com/watch?v=DdEU7GmYyWQ"
+		},
+		{
+			"timestamp": "5/17/2025 12:44:51",
+			"projectName": "Artify - Decentralized Art Marketplace",
+			"teamName": "Builders",
+			"githubLink": "https://github.com/Irisisme2/Artify",
+			"deployedLink": "",
+			"problemSolved": "Solving issues in digital art world including centralized control, security and ownership, high transaction costs, and lack of global access.",
+			"challenges": [
+				"Integrating Multiple Blockchains",
+				"High Gas Fees on Ethereum",
+				"Decentralized Storage Integration",
+				"Ensuring Security and Ownership",
+				"User Experience and Onboarding"
+			],
+			"teamMembers": ["Wiktoria Jarema"],
+			"tracks": ["Ethereum Track", "Polygon Track"],
+			"photos": ["https://drive.google.com/open?id=18_FIHh_RCzZfvWpzDkBnOyOr0Q5kXFe5"],
+			"youtubeLink": ""
+		},
+		{
+			"timestamp": "5/17/2025 12:52:46",
+			"projectName": "CrediFlow",
+			"teamName": "Builders",
+			"githubLink": "https://github.com/Aswinr24/CrediFlow",
+			"deployedLink": "https://web3ssh.vercel.app/",
+			"problemSolved": "Addressing inefficiencies in traditional supply chain finance processes through blockchain technology, improving transparency, reducing costs, and enhancing trust among participants.",
+			"challenges": [
+				"Time Constraints",
+				"Integrating wagmi Hooks",
+				"Complexity in Design",
+				"Resource-Intensive Application"
+			],
+			"teamMembers": ["R ASWIN"],
+			"tracks": ["Ethereum Track", "Polygon Track"],
+			"photos": [
+				"https://drive.google.com/open?id=1GDeiVLtO128Rw_w7Y63X_oHIfFvyfAt1",
+				"https://drive.google.com/open?id=1UM3GmQJuAffmyw8pdm0Puv0BKQ7PehuG",
+				"https://drive.google.com/open?id=1G4q_YuwVMbrKRd3Jsrd5jVPJj2oU5AQr",
+				"https://drive.google.com/open?id=1-SkHFjnweG7Dwu3ysgBXPkOH0IWR1AQe",
+				"https://drive.google.com/open?id=1tI0GlalKH3g7ntnuo_LIZPQH9Y1VhUsg",
+				"https://drive.google.com/open?id=1NEqGzmrphkPEDD8SLosbjpIPajDQXxlp"
+			],
+			"youtubeLink": "https://www.youtube.com/watch?v=uZ2vJaX2lIU"
+		},
+		{
+			"timestamp": "5/18/2025 0:40:32",
+			"projectName": "TeraChain",
+			"teamName": "Utsav",
+			"githubLink": "https://github.com/Utsav631/TeraChain",
+			"deployedLink": "",
+			"problemSolved": "Addressing issues in land registry systems including fraud, inefficiency, and legal disputes through blockchain technology.",
+			"challenges": ["Scalability", "Data Migration", "User Adoption", "Regulatory Compliance"],
+			"teamMembers": ["Utsav Saini"],
+			"tracks": ["Ethereum Track"],
+			"photos": [
+				"https://drive.google.com/open?id=1Ck4lXf-3zlr2Px9mLUMyk2vP6wsck7sg",
+				"https://drive.google.com/open?id=1sfaJAsQwUkw-gt7gk2ZjaY3NA1Upx0t3"
+			],
+			"youtubeLink": "https://youtu.be/86VXyaftmTs"
+		},
+		{
+			"timestamp": "5/18/2025 0:44:00",
+			"projectName": "Xfile",
+			"teamName": "Jai",
+			"githubLink": "https://github.com/jaikumar9/Xfile_hack",
+			"deployedLink": "https://xfile-hack.vercel.app/",
+			"problemSolved": "Addressing centralized storage issues by offering a decentralized solution that ensures enhanced security, data integrity, and user control.",
+			"challenges": ["RPC errors", "Configuring Web3 model", "Writing and testing smart contracts"],
+			"teamMembers": ["Jai Agdayemawer"],
+			"tracks": ["Polygon Track"],
+			"photos": [
+				"https://drive.google.com/open?id=1t7PG4jILdRHZto-dxfqgLdLu9EYMP6VN",
+				"https://drive.google.com/open?id=1TtfDvj0IyfPCh82SMkOUfCSFbyaYRMOk"
+			],
+			"youtubeLink": "https://youtu.be/pFnnQhYoyfc"
+		},
+		{
+			"timestamp": "5/18/2025 0:59:48",
+			"projectName": "Multi-Send Application",
+			"teamName": "Divyanshu",
+			"githubLink": "https://github.com/DivyanshuMajhi?tab=repositories",
+			"deployedLink": "",
+			"problemSolved": "Enabling multiple payments to be processed simultaneously, saving time and reducing transaction fees.",
+			"challenges": ["Extension compatibility issues", "Transaction implementation"],
+			"teamMembers": ["Divyanshu Majhi"],
+			"tracks": ["Ethereum Track"],
+			"photos": ["https://drive.google.com/open?id=1lqZO3IjW4D9r4SyxMhd96jy4q1tjBZyj"],
+			"youtubeLink": "https://youtu.be/fJKawplKzEU"
+		},
+		{
+			"timestamp": "5/18/2025 1:04:57",
+			"projectName": "KNOW YOUR PATIENT [KYP]",
+			"teamName": "Kumar",
+			"githubLink": "https://github.com/DEVILKING10/KNOW-YOUR-PATIENTS",
+			"deployedLink": "",
+			"problemSolved": "Improving management and security of patient data, enhancing transparency, and empowering patients in their healthcare journeys through Web 3.0 framework.",
+			"challenges": [
+				"Linking ethereum database and metamask account",
+				"Adding details of doctor and patients to the database"
+			],
+			"teamMembers": ["Kumar C"],
+			"tracks": [],
+			"photos": [
+				"https://drive.google.com/open?id=1twei6CSlj8v67LUm2uv9c6mZ6pXG8SJW",
+				"https://drive.google.com/open?id=1Ae-d5SBHpmdGVkSsRzw6xg7dfPE3fQQa",
+				"https://drive.google.com/open?id=1pJcjwU7Psi2oWcoWUuIWHUAsCGKSORXn"
+			],
+			"youtubeLink": "https://youtu.be/sXid5PsflCA"
+		},
+		{
+			"timestamp": "5/18/2025 1:10:10",
+			"projectName": "Grantitude",
+			"teamName": "Immutable",
+			"githubLink": "https://github.com/sinster2003/grantitude",
+			"deployedLink": "https://grantitude-github.vercel.app/",
+			"problemSolved": "Streamlining the process of rewarding contributors in open-source development through a decentralized platform ensuring fairness, transparency, and efficiency.",
+			"challenges": [
+				"Dealing with GitHub APIs",
+				"Ensuring Security",
+				"GitHub OAuth to Manage Apps"
+			],
+			"teamMembers": ["Sindhur V Shabaraya", "Rakshita Patel"],
+			"tracks": ["Polygon Track"],
+			"photos": [
+				"https://drive.google.com/open?id=1pjXLHlNvWOZ2zKs1X1gLWIdcUHRVNMNC",
+				"https://drive.google.com/open?id=1zeVMlJDHa7gN6oRYv4tL3Y8tlGWi_jXM",
+				"https://drive.google.com/open?id=1veb1HV-C4gDPnr3fBK2yX-Z5ZmpoPQKO"
+			],
+			"youtubeLink": "https://www.youtube.com/watch?v=YN_j62jSnMY"
+		},
+		{
+			"timestamp": "5/18/2025 12:10:41",
+			"projectName": "Happy Piggy Bank",
+			"teamName": "TERIDI",
+			"githubLink": "https://github.com/Akshitadimpu05/Web3Hackathon",
+			"deployedLink": "",
+			"problemSolved": "Addressing high fees in traditional banks/saving accounts by providing a virtual piggy bank with minimal charges and guaranteed security.",
+			"challenges": ["Technical challenges and bugs", "Learning curve with new technologies"],
+			"teamMembers": ["Rishitha Isbergaa", "Akshita Pagoti", "TejaSri Pacharu"],
+			"tracks": ["Ethereum Track"],
+			"photos": [],
+			"youtubeLink": ""
+		}
+	]
+}

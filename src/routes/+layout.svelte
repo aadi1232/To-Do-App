@@ -10,7 +10,26 @@
 	import { initializeSocket, cleanup, connected } from '$lib/stores/socket';
 	import { getUserGroups } from '$lib/api/groups';
 	import { fetchCurrentUser, user } from '$lib/stores/user';
+	import posthog from 'posthog-js';
 
+	onMount(async () => {
+		if (browser) {
+			posthog.init('phc_e52xCDt7vkMC1LXwvQqWS36BTIlK4HgN01M5dt86g5H', {
+				api_host: 'https://us.i.posthog.com',
+				person_profiles: 'identified_only'
+			});
+
+			const userData = await fetchCurrentUser();
+
+			if (userData) {
+				initSocketConnection();
+				posthog.identify(userData._id, {
+					email: userData.email,
+					username: userData.username
+				});
+			}
+		}
+	});
 	// Define User type to match store definition
 	type User = {
 		_id: string;
